@@ -1,9 +1,14 @@
 # QuantityMeasurementApp
+
+A Java application that demonstrates equality comparison of length measurements 
+using object-oriented principles and progressive refactoring (UC1 → UC3).
+
 ---
-# UC1 (Feet Equality)
+
+# UC1 – Feet Equality
 
 ## Overview
-This application checks the equality of two numerical values measured in **feet**.  
+This use case checks the equality of two numerical values measured in **feet**.  
 It ensures proper floating-point comparison, null safety, and type safety.
 
 ## Features
@@ -27,10 +32,10 @@ Output: Equal (true)
 
 ---
 
-# UC2 (Inches Equality)
+# UC2 – Inches Equality
 
 ## Overview
-This project extends UC1 by adding **Inches equality** along with **Feet equality**.  
+This use case extends UC1 by adding **Inches equality** along with **Feet equality**.  
 Feet and Inches are treated as separate classes.
 
 ## Features
@@ -42,8 +47,8 @@ Feet and Inches are treated as separate classes.
 
 ## Example
 ```
-Input: 1.0 inch and 1.0 inch
-Output: true
+Input: 1.0 inch and 1.0 inch  
+Output: Equal (true)
 ```
 
 ## Test Cases
@@ -52,3 +57,33 @@ Output: true
 - testEquality_NullComparison()
 - testEquality_NonNumericInput()
 - testEquality_SameReference()
+
+---
+
+# UC3 – Generic Quantity Class (DRY Principle)
+
+## Overview
+UC3 refactors the separate Feet and Inches classes into a single 
+**QuantityLength** class using a **LengthUnit enum**.
+
+This eliminates code duplication and follows the  
+**DRY (Don't Repeat Yourself) principle** while preserving all UC1 and UC2 functionality.
+
+## Features
+- Single `QuantityLength` class for all length units
+- `LengthUnit` enum for type-safe unit handling
+- Cross-unit comparison (1 ft = 12 inches)
+- Floating-point comparison using `Double.compare()`
+- Null and type safety
+- Backward compatible with UC1 & UC2
+
+## Example
+```
+Input: Quantity(1.0, "feet") and Quantity(12.0, "inches")  
+Output: Equal (true)
+
+Input: Quantity(1.0, "inch") and Quantity(1.0, "inch")  
+Output: Equal (true)
+```
+
+---
