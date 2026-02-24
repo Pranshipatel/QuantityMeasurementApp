@@ -7,18 +7,41 @@ public class Length {
 
  private final double value;
  private final LengthUnit unit;
- 
 
  public Length(double value, LengthUnit unit) {
-     if (unit == null) {
-         throw new IllegalArgumentException("Unit cannot be null");
-     }
+     validateValue(value);
+     validateUnit(unit);
      this.value = value;
      this.unit = unit;
  }
 
+
+
+
+ // Conversion Methods
+ public static double convert(double value, LengthUnit source, LengthUnit target) {
+
+     validateValue(value);
+     validateUnit(source);
+     validateUnit(target);
+
+     if (source == target) {
+         return value;
+     }
+
+     return value * (source.getConversionFactor() / target.getConversionFactor());
+ }
+
+ public Length convertTo(LengthUnit targetUnit) {
+     double convertedValue = convert(this.value, this.unit, targetUnit);
+     return new Length(convertedValue, targetUnit);
+ }
+
+
+
+ // Equality and Comparison Methods
  private double convertToBaseUnit() {
-     return value * unit.getConversionFactor();
+     return this.value * unit.getConversionFactor();
  }
 
  public boolean compare(Length other) {
@@ -31,30 +54,44 @@ public class Length {
      ) == 0;
  }
 
- 
- private double round(double value) {
-     return Math.round(value * 10000.0) / 10000.0;
- }
- 
  @Override
  public boolean equals(Object obj) {
 
-     if (this == obj) return true;
-     if (!(obj instanceof Length)) return false;
+     if (this == obj)
+         return true;
+
+     if (obj == null || getClass() != obj.getClass())
+         return false;
 
      Length other = (Length) obj;
 
-     return round(this.convertToBaseUnit())
-             == round(other.convertToBaseUnit());
+     return Double.compare(
+             this.convertToBaseUnit(),
+             other.convertToBaseUnit()
+     ) == 0;
  }
 
  @Override
  public int hashCode() {
-     return Objects.hash(round(convertToBaseUnit()));
+     return Objects.hash(convertToBaseUnit());
  }
-
+ 
  @Override
  public String toString() {
      return "Quantity(" + value + ", " + unit + ")";
+ }
+
+
+ // Validation Methods for Lengths 
+ private static void validateUnit(LengthUnit unit) {
+     if (unit == null) {
+         throw new IllegalArgumentException("Unit cannot be null");
+     }
+ }
+
+ private static void validateValue(double value) {
+     if (!Double.isFinite(value)) {
+         throw new IllegalArgumentException("Value must be finite");
+     }
  }
 }
