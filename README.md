@@ -99,7 +99,7 @@ UC4 extends the Quantity Measurement system by adding support for:
 
 The generic `QuantityLength` design allows new units to be added by modifying only the `LengthUnit` enum. No changes are required in the core comparison logic.
 
----
+
 
 ## Supported Units
 
@@ -110,7 +110,7 @@ The generic `QuantityLength` design allows new units to be added by modifying on
 
 All cross-unit comparisons are supported (yard ↔ feet ↔ inches ↔ cm).
 
----
+
 
 ## Example Usage
 
