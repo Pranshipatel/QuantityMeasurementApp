@@ -5,7 +5,7 @@ using object-oriented principles and progressive refactoring (UC1 → UC3).
 
 ---
 
-# UC1 – Feet Equality
+# 📏 UC1 – Feet Equality
 
 ## Overview
 This use case checks the equality of two numerical values measured in **feet**.  
@@ -32,7 +32,7 @@ Output: Equal (true)
 
 ---
 
-# UC2 – Inches Equality
+# 📏 UC2 – Inches Equality
 
 ## Overview
 This use case extends UC1 by adding **Inches equality** along with **Feet equality**.  
@@ -60,7 +60,7 @@ Output: Equal (true)
 
 ---
 
-# UC3 – Generic Quantity Class (DRY Principle)
+# 📏 UC3 – Generic Quantity Class (DRY Principle)
 
 ## Overview
 UC3 refactors the separate Feet and Inches classes into a single 
@@ -87,3 +87,35 @@ Output: Equal (true)
 ```
 
 ---
+# 📏 Yard Equality – UC4
+
+## Extended Unit Support (Yards & Centimeters)
+
+### Overview
+UC4 extends the Quantity Measurement system by adding support for:
+
+- **YARDS** (1 yard = 3 feet)
+- **CENTIMETERS** (1 cm = 0.393701 inches)
+
+The generic `QuantityLength` design allows new units to be added by modifying only the `LengthUnit` enum. No changes are required in the core comparison logic.
+
+---
+
+## Supported Units
+
+- FEET
+- INCHES
+- YARDS
+- CENTIMETERS
+
+All cross-unit comparisons are supported (yard ↔ feet ↔ inches ↔ cm).
+
+---
+
+## Example Usage
+
+```java
+QuantityLength q1 = new QuantityLength(1.0, LengthUnit.YARDS);
+QuantityLength q2 = new QuantityLength(3.0, LengthUnit.FEET);
+
+System.out.println(q1.equals(q2)); // true
