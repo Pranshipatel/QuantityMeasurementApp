@@ -1,1251 +1,1095 @@
 package com.apps.quantitymeasurement;
 
-import org.junit.jupiter.api.Nested;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.*;
-
-class QuantityTest {
-
-    private Quantity<LengthUnit> length(double value, LengthUnit unit) {
-        return new Quantity<>(value, unit);
-    }
-
-    private Quantity<WeightUnit> weight(double value, WeightUnit unit) {
-        return new Quantity<>(value, unit);
-    }
-
-    private Quantity<VolumeUnit> volume(double value, VolumeUnit unit) {
-        return new Quantity<>(value, unit);
-    }
-
-    private Quantity<TemperatureUnit> temp(double value, TemperatureUnit unit) {
-        return new Quantity<>(value, unit);
-    }
-
-    @SuppressWarnings("unchecked")
-    private <A extends IMeasurable, B extends IMeasurable> void subtractCrossCategory(
-            Quantity<A> q1, Quantity<B> q2) {
-        ((Quantity<A>) (Quantity<?>) q1).subtract((Quantity<A>) (Quantity<?>) q2);
-    }
-
-    @SuppressWarnings("unchecked")
-    private <A extends IMeasurable, B extends IMeasurable> void divideCrossCategory(
-            Quantity<A> q1, Quantity<B> q2) {
-        ((Quantity<A>) (Quantity<?>) q1).divide((Quantity<A>) (Quantity<?>) q2);
-    }
-
-
-    // UC1–UC4: Length equality across same unit, cross unit, and contract properties
-    @Nested
-    class LengthEqualityTests {
-
-        @Test
-        void shouldBeEqual_whenSameValueAndUnit() {
-            assertEquals(length(5, LengthUnit.FEET), length(5, LengthUnit.FEET));
-        }
-
-        @Test
-        void shouldNotBeEqual_whenDifferentValue() {
-            assertNotEquals(length(5, LengthUnit.FEET), length(6, LengthUnit.FEET));
-        }
-
-        @Test
-        void shouldBeEqual_whenCrossUnit_FeetAndInches() {
-            assertEquals(length(1, LengthUnit.FEET), length(12, LengthUnit.INCHES));
-        }
-
-        @Test
-        void shouldBeEqual_whenCrossUnit_YardsAndFeet() {
-            assertEquals(length(1, LengthUnit.YARDS), length(3, LengthUnit.FEET));
-        }
-
-        @Test
-        void shouldBeEqual_whenCrossUnit_CentimetersAndInches() {
-            assertEquals(length(1, LengthUnit.CENTIMETERS), length(0.393701, LengthUnit.INCHES));
-        }
-
-        @Test
-        void shouldReturnFalse_whenComparedWithNull() {
-            assertNotEquals(length(2, LengthUnit.FEET), null);
-        }
-
-        @Test
-        void shouldFollowEqualityContract_transitivity() {
-            Quantity<LengthUnit> a = length(1, LengthUnit.YARDS);
-            Quantity<LengthUnit> b = length(3, LengthUnit.FEET);
-            Quantity<LengthUnit> c = length(36, LengthUnit.INCHES);
-            assertTrue(a.equals(b) && b.equals(c) && a.equals(c));
-        }
-    }
-
-
-    // UC5: Length conversion between all supported unit pairs
-    @Nested
-    class LengthConversionTests {
-
-        @Test
-        void shouldConvertFeetToInches() {
-            assertEquals(length(12, LengthUnit.INCHES),
-                    length(1, LengthUnit.FEET).convertTo(LengthUnit.INCHES));
-        }
-
-        @Test
-        void shouldConvertYardsToFeet() {
-            assertEquals(length(9, LengthUnit.FEET),
-                    length(3, LengthUnit.YARDS).convertTo(LengthUnit.FEET));
-        }
-
-        @Test
-        void shouldConvertInchesToYards() {
-            assertEquals(length(1, LengthUnit.YARDS),
-                    length(36, LengthUnit.INCHES).convertTo(LengthUnit.YARDS));
-        }
-
-        @Test
-        void shouldConvertCentimetersToFeet() {
-            assertEquals(length(1, LengthUnit.FEET),
-                    length(30.48, LengthUnit.CENTIMETERS).convertTo(LengthUnit.FEET));
-        }
-
-        @Test
-        void shouldReturnSameInstance_whenSameUnit() {
-            Quantity<LengthUnit> original = length(5, LengthUnit.FEET);
-            assertSame(original, original.convertTo(LengthUnit.FEET));
-        }
-
-        @Test
-        void shouldThrowException_whenTargetUnitIsNull() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> length(1, LengthUnit.FEET).convertTo(null));
-        }
-    }
-
-
-    // UC6: Length addition with result expressed in the first operand's unit
-    @Nested
-    class LengthAdditionTests {
-
-        @Test
-        void shouldAddSameUnit() {
-            assertEquals(length(5, LengthUnit.FEET),
-                    length(2, LengthUnit.FEET).add(length(3, LengthUnit.FEET)));
-        }
-
-        @Test
-        void shouldAddCrossUnit_FeetAndInches() {
-            assertEquals(length(1.5, LengthUnit.FEET),
-                    length(1, LengthUnit.FEET).add(length(6, LengthUnit.INCHES)));
-        }
-
-        @Test
-        void shouldThrowException_whenAddingNull() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> length(1, LengthUnit.FEET).add(null));
-        }
-    }
-
-
-    // UC7: Length addition with result expressed in a specified target unit
-    @Nested
-    class LengthTargetAdditionTests {
-
-        @Test
-        void shouldAddFeetAndInches_inFeet() {
-            assertEquals(length(2, LengthUnit.FEET),
-                    Quantity.add(length(1, LengthUnit.FEET), length(12, LengthUnit.INCHES), LengthUnit.FEET));
-        }
-
-        @Test
-        void shouldAddFeetAndInches_inInches() {
-            assertEquals(length(24, LengthUnit.INCHES),
-                    Quantity.add(length(1, LengthUnit.FEET), length(12, LengthUnit.INCHES), LengthUnit.INCHES));
-        }
-
-        @Test
-        void shouldAddYardsAndFeet_inYards() {
-            assertEquals(length(2, LengthUnit.YARDS),
-                    Quantity.add(length(1, LengthUnit.YARDS), length(3, LengthUnit.FEET), LengthUnit.YARDS));
-        }
-
-        @Test
-        void shouldThrowException_whenTargetUnitIsNull() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> Quantity.add(length(1, LengthUnit.FEET), length(1, LengthUnit.FEET), null));
-        }
-    }
-
-
-    // UC9: Weight equality across same unit and cross unit comparisons
-    @Nested
-    class WeightEqualityTests {
-
-        @Test
-        void shouldBeEqual_whenSameValueAndUnit() {
-            assertEquals(weight(2, WeightUnit.KILOGRAM), weight(2, WeightUnit.KILOGRAM));
-        }
-
-        @Test
-        void shouldBeEqual_whenKilogramEqualsGram() {
-            assertEquals(weight(1, WeightUnit.KILOGRAM), weight(1000, WeightUnit.GRAM));
-        }
-
-        @Test
-        void shouldBeEqual_whenGramEqualsPound() {
-            assertEquals(weight(453.592, WeightUnit.GRAM), weight(1, WeightUnit.POUND));
-        }
-
-        @Test
-        void shouldNotBeEqual_whenDifferentValue() {
-            assertNotEquals(weight(1, WeightUnit.KILOGRAM), weight(2, WeightUnit.KILOGRAM));
-        }
-
-        @Test
-        void shouldReturnFalse_whenComparedWithDifferentCategory() {
-            assertNotEquals((Object) weight(1, WeightUnit.KILOGRAM),
-                    (Object) length(1, LengthUnit.FEET));
-        }
-    }
-
-
-    // UC9: Weight conversion between all supported unit pairs
-    @Nested
-    class WeightConversionTests {
-
-        @Test
-        void shouldConvertKilogramToGram() {
-            assertEquals(weight(1000, WeightUnit.GRAM),
-                    weight(1, WeightUnit.KILOGRAM).convertTo(WeightUnit.GRAM));
-        }
-
-        @Test
-        void shouldConvertKilogramToPound() {
-            assertEquals(2.2,
-                    weight(1, WeightUnit.KILOGRAM).convertTo(WeightUnit.POUND).getValue(), 0.01);
-        }
-
-        @Test
-        void shouldConvertGramToKilogram() {
-            assertEquals(weight(2, WeightUnit.KILOGRAM),
-                    weight(2000, WeightUnit.GRAM).convertTo(WeightUnit.KILOGRAM));
-        }
-
-        @Test
-        void shouldReturnSameInstance_whenSameUnit() {
-            Quantity<WeightUnit> original = weight(5, WeightUnit.KILOGRAM);
-            assertSame(original, original.convertTo(WeightUnit.KILOGRAM));
-        }
-
-        @Test
-        void shouldThrowException_whenTargetUnitIsNull() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> weight(1, WeightUnit.KILOGRAM).convertTo(null));
-        }
-    }
-
-
-    // UC9: Weight addition with implicit and explicit target unit
-    @Nested
-    class WeightAdditionTests {
-
-        @Test
-        void shouldAddCrossUnit_KilogramAndGram() {
-            assertEquals(weight(2, WeightUnit.KILOGRAM),
-                    weight(1, WeightUnit.KILOGRAM).add(weight(1000, WeightUnit.GRAM)));
-        }
-
-        @Test
-        void shouldAddKilogramAndGram_inGram() {
-            assertEquals(weight(2000, WeightUnit.GRAM),
-                    Quantity.add(weight(1, WeightUnit.KILOGRAM), weight(1000, WeightUnit.GRAM), WeightUnit.GRAM));
-        }
-
-        @Test
-        void shouldAddKilogramAndPound_inKilogram() {
-            assertEquals(3.81,
-                    Quantity.add(weight(2, WeightUnit.KILOGRAM), weight(4, WeightUnit.POUND), WeightUnit.KILOGRAM).getValue(),
-                    0.01);
-        }
-
-        @Test
-        void shouldThrowException_whenAddingNull() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> weight(1, WeightUnit.KILOGRAM).add(null));
-        }
-    }
-
-
-    // UC11: Volume equality across same unit, cross unit, and edge cases
-    @Nested
-    class VolumeEqualityTests {
-
-        @Test
-        void shouldBeEqual_whenSameUnit_Litre() {
-            assertEquals(volume(1, VolumeUnit.LITRE), volume(1, VolumeUnit.LITRE));
-        }
-
-        @Test
-        void shouldBeEqual_whenLitreEqualsMillilitre() {
-            assertEquals(volume(1, VolumeUnit.LITRE), volume(1000, VolumeUnit.MILLILITRE));
-        }
-
-        @Test
-        void shouldBeEqual_whenGallonEqualsLitre() {
-            assertEquals(volume(1, VolumeUnit.GALLON), volume(3.78541, VolumeUnit.LITRE));
-        }
-
-        @Test
-        void shouldNotBeEqual_whenDifferentValue() {
-            assertNotEquals(volume(1, VolumeUnit.LITRE), volume(2, VolumeUnit.LITRE));
-        }
-
-        @Test
-        void shouldBeEqual_whenZeroAcrossUnits() {
-            assertEquals(volume(0, VolumeUnit.LITRE), volume(0, VolumeUnit.MILLILITRE));
-        }
-
-        @Test
-        void shouldBeEqual_whenNegativeAcrossUnits() {
-            assertEquals(volume(-1, VolumeUnit.LITRE), volume(-1000, VolumeUnit.MILLILITRE));
-        }
-    }
-
-
-    // UC11: Volume conversion between all supported unit pairs
-    @Nested
-    class VolumeConversionTests {
-
-        @Test
-        void shouldConvertLitreToMillilitre() {
-            assertEquals(volume(1000, VolumeUnit.MILLILITRE),
-                    volume(1, VolumeUnit.LITRE).convertTo(VolumeUnit.MILLILITRE));
-        }
-
-        @Test
-        void shouldConvertMillilitreToLitre() {
-            assertEquals(volume(1, VolumeUnit.LITRE),
-                    volume(1000, VolumeUnit.MILLILITRE).convertTo(VolumeUnit.LITRE));
-        }
-
-        @Test
-        void shouldConvertGallonToLitre() {
-            assertEquals(3.79,
-                    volume(1, VolumeUnit.GALLON).convertTo(VolumeUnit.LITRE).getValue(), 0.01);
-        }
-
-        @Test
-        void shouldConvertMillilitreToGallon() {
-            assertEquals(0.26,
-                    volume(1000, VolumeUnit.MILLILITRE).convertTo(VolumeUnit.GALLON).getValue(), 0.01);
-        }
-
-        @Test
-        void shouldReturnSameInstance_whenSameUnit() {
-            Quantity<VolumeUnit> original = volume(5, VolumeUnit.LITRE);
-            assertSame(original, original.convertTo(VolumeUnit.LITRE));
-        }
-
-        @Test
-        void shouldThrowException_whenTargetUnitIsNull() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> volume(1, VolumeUnit.LITRE).convertTo(null));
-        }
-    }
-
-
-    // UC11: Volume addition with implicit and explicit target unit
-    @Nested
-    class VolumeAdditionTests {
-
-        @Test
-        void shouldAddCrossUnit_LitrePlusMillilitre() {
-            assertEquals(volume(2, VolumeUnit.LITRE),
-                    volume(1, VolumeUnit.LITRE).add(volume(1000, VolumeUnit.MILLILITRE)));
-        }
-
-        @Test
-        void shouldAddCrossUnit_MillilitrePlusLitre() {
-            assertEquals(volume(2000, VolumeUnit.MILLILITRE),
-                    volume(1000, VolumeUnit.MILLILITRE).add(volume(1, VolumeUnit.LITRE)));
-        }
-
-        @Test
-        void shouldAddLitreAndMillilitre_inMillilitre() {
-            assertEquals(volume(2000, VolumeUnit.MILLILITRE),
-                    Quantity.add(volume(1, VolumeUnit.LITRE), volume(1000, VolumeUnit.MILLILITRE), VolumeUnit.MILLILITRE));
-        }
-
-        @Test
-        void shouldAddGallonAndLitre_inGallon() {
-            assertEquals(2.0,
-                    Quantity.add(volume(1, VolumeUnit.GALLON), volume(3.78541, VolumeUnit.LITRE), VolumeUnit.GALLON).getValue(),
-                    0.01);
-        }
-
-        @Test
-        void shouldThrowException_whenAddingNull() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> volume(1, VolumeUnit.LITRE).add(null));
-        }
-    }
-
-
-    // UC12: Length subtraction with implicit and explicit target unit
-    @Nested
-    class LengthSubtractionTests {
-
-        @Test
-        void shouldSubtractCrossUnit_FeetMinusInches() {
-            assertEquals(length(9.5, LengthUnit.FEET),
-                    length(10, LengthUnit.FEET).subtract(length(6, LengthUnit.INCHES)));
-        }
-
-        @Test
-        void shouldSubtractSameUnit() {
-            assertEquals(length(5, LengthUnit.FEET),
-                    length(10, LengthUnit.FEET).subtract(length(5, LengthUnit.FEET)));
-        }
-
-        @Test
-        void shouldReturnNegative_whenSecondOperandIsLarger() {
-            assertEquals(length(-5, LengthUnit.FEET),
-                    length(5, LengthUnit.FEET).subtract(length(10, LengthUnit.FEET)));
-        }
-
-        @Test
-        void shouldReturnZero_whenEquivalentLengths() {
-            assertEquals(length(0, LengthUnit.FEET),
-                    length(10, LengthUnit.FEET).subtract(length(120, LengthUnit.INCHES)));
-        }
-
-        @Test
-        void shouldSubtractFeetAndInches_inInches() {
-            assertEquals(length(114, LengthUnit.INCHES),
-                    length(10, LengthUnit.FEET).subtract(length(6, LengthUnit.INCHES), LengthUnit.INCHES));
-        }
-
-        @Test
-        void shouldSubtractIntoYards() {
-            assertEquals(length(0.5, LengthUnit.YARDS),
-                    length(36, LengthUnit.INCHES).subtract(length(1, LengthUnit.FEET), LengthUnit.YARDS));
-        }
-
-        @Test
-        void shouldBeNonCommutative() {
-            assertNotEquals(
-                    length(10, LengthUnit.FEET).subtract(length(5, LengthUnit.FEET)),
-                    length(5, LengthUnit.FEET).subtract(length(10, LengthUnit.FEET)));
-        }
-
-        @Test
-        void shouldSupportChainedSubtraction() {
-            assertEquals(length(7, LengthUnit.FEET),
-                    length(10, LengthUnit.FEET)
-                            .subtract(length(2, LengthUnit.FEET))
-                            .subtract(length(1, LengthUnit.FEET)));
-        }
-
-        @Test
-        void shouldNotMutateOriginals() {
-            Quantity<LengthUnit> a = length(10, LengthUnit.FEET);
-            Quantity<LengthUnit> b = length(3, LengthUnit.FEET);
-            a.subtract(b);
-            assertEquals(length(10, LengthUnit.FEET), a);
-            assertEquals(length(3, LengthUnit.FEET), b);
-        }
-
-        @Test
-        void shouldThrowException_whenSubtractingNull() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> length(10, LengthUnit.FEET).subtract(null));
-        }
-
-        @Test
-        void shouldThrowException_whenTargetUnitIsNull() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> length(10, LengthUnit.FEET).subtract(length(5, LengthUnit.FEET), null));
-        }
-
-        @Test
-        void shouldThrowException_whenCrossCategory() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> subtractCrossCategory(length(10, LengthUnit.FEET), weight(5, WeightUnit.KILOGRAM)));
-        }
-    }
-
-
-    // UC12: Weight subtraction with implicit and explicit target unit
-    @Nested
-    class WeightSubtractionTests {
-
-        @Test
-        void shouldSubtractCrossUnit_KilogramMinusGram() {
-            assertEquals(weight(5, WeightUnit.KILOGRAM),
-                    weight(10, WeightUnit.KILOGRAM).subtract(weight(5000, WeightUnit.GRAM)));
-        }
-
-        @Test
-        void shouldReturnNegative_whenSecondIsLarger() {
-            assertEquals(weight(-3, WeightUnit.KILOGRAM),
-                    weight(2, WeightUnit.KILOGRAM).subtract(weight(5, WeightUnit.KILOGRAM)));
-        }
-
-        @Test
-        void shouldSubtractWithExplicitTargetUnit_inGram() {
-            assertEquals(weight(5000, WeightUnit.GRAM),
-                    weight(10, WeightUnit.KILOGRAM).subtract(weight(5000, WeightUnit.GRAM), WeightUnit.GRAM));
-        }
-
-        @Test
-        void shouldThrowException_whenSubtractingNull() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> weight(10, WeightUnit.KILOGRAM).subtract(null));
-        }
-
-        @Test
-        void shouldThrowException_whenCrossCategory() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> subtractCrossCategory(weight(10, WeightUnit.KILOGRAM), volume(5, VolumeUnit.LITRE)));
-        }
-    }
-
-
-    // UC12: Volume subtraction with implicit and explicit target unit
-    @Nested
-    class VolumeSubtractionTests {
-
-        @Test
-        void shouldSubtractCrossUnit_LitreMinusMillilitre() {
-            assertEquals(volume(4.5, VolumeUnit.LITRE),
-                    volume(5, VolumeUnit.LITRE).subtract(volume(500, VolumeUnit.MILLILITRE)));
-        }
-
-        @Test
-        void shouldReturnZero_whenEquivalentVolumes() {
-            assertEquals(volume(0, VolumeUnit.LITRE),
-                    volume(1, VolumeUnit.LITRE).subtract(volume(1000, VolumeUnit.MILLILITRE)));
-        }
-
-        @Test
-        void shouldSubtractWithExplicitTargetUnit_inMillilitre() {
-            assertEquals(volume(3000, VolumeUnit.MILLILITRE),
-                    volume(5, VolumeUnit.LITRE).subtract(volume(2, VolumeUnit.LITRE), VolumeUnit.MILLILITRE));
-        }
-
-        @Test
-        void shouldThrowException_whenSubtractingNull() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> volume(5, VolumeUnit.LITRE).subtract(null));
-        }
-
-        @Test
-        void shouldThrowException_whenCrossCategory() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> subtractCrossCategory(volume(5, VolumeUnit.LITRE), length(5, LengthUnit.FEET)));
-        }
-    }
-
-
-    // UC12: Division returning a dimensionless scalar ratio across all categories
-    @Nested
-    class DivisionTests {
-
-        @Test
-        void shouldDivideSameUnit_length() {
-            assertEquals(5.0, length(10, LengthUnit.FEET).divide(length(2, LengthUnit.FEET)), 1e-9);
-        }
-
-        @Test
-        void shouldDivideCrossUnit_InchesAndFeet() {
-            assertEquals(1.0, length(24, LengthUnit.INCHES).divide(length(2, LengthUnit.FEET)), 1e-9);
-        }
-
-        @Test
-        void shouldReturnRatioLessThanOne_length() {
-            assertEquals(0.5, length(5, LengthUnit.FEET).divide(length(10, LengthUnit.FEET)), 1e-9);
-        }
-
-        @Test
-        void shouldDivideCrossUnit_GramAndKilogram() {
-            assertEquals(2.0, weight(2000, WeightUnit.GRAM).divide(weight(1, WeightUnit.KILOGRAM)), 1e-9);
-        }
-
-        @Test
-        void shouldReturnOne_whenBothAreEqual_weight() {
-            assertEquals(1.0, weight(1, WeightUnit.KILOGRAM).divide(weight(1000, WeightUnit.GRAM)), 1e-9);
-        }
-
-        @Test
-        void shouldDivideCrossUnit_MillilitreAndLitre() {
-            assertEquals(1.0, volume(1000, VolumeUnit.MILLILITRE).divide(volume(1, VolumeUnit.LITRE)), 1e-9);
-        }
-
-        @Test
-        void shouldReturnRatioLessThanOne_volume() {
-            assertEquals(0.5, volume(5, VolumeUnit.LITRE).divide(volume(10, VolumeUnit.LITRE)), 1e-9);
-        }
-
-        @Test
-        void shouldBeNonCommutative() {
-            double ab = length(10, LengthUnit.FEET).divide(length(5, LengthUnit.FEET));
-            double ba = length(5, LengthUnit.FEET).divide(length(10, LengthUnit.FEET));
-            assertNotEquals(ab, ba);
-        }
-
-        @Test
-        void shouldThrowArithmeticException_whenDividingByZero() {
-            assertThrows(ArithmeticException.class,
-                    () -> length(10, LengthUnit.FEET).divide(length(0, LengthUnit.FEET)));
-        }
-
-        @Test
-        void shouldThrowException_whenDividingByNull() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> length(10, LengthUnit.FEET).divide(null));
-        }
-
-        @Test
-        void shouldThrowException_whenCrossCategory() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> divideCrossCategory(length(10, LengthUnit.FEET), weight(5, WeightUnit.KILOGRAM)));
-        }
-
-        @Test
-        void shouldNotMutateOriginals() {
-            Quantity<LengthUnit> a = length(10, LengthUnit.FEET);
-            Quantity<LengthUnit> b = length(2, LengthUnit.FEET);
-            a.divide(b);
-            assertEquals(length(10, LengthUnit.FEET), a);
-            assertEquals(length(2, LengthUnit.FEET), b);
-        }
-    }
-
-
-    // UC10/UC11/UC12: Cross-category equality, subtract, and divide must all be rejected
-    @Nested
-    class CrossCategoryTests {
-
-        @Test
-        void shouldNotBeEqual_volumeVsLength() {
-            assertNotEquals((Object) volume(1, VolumeUnit.LITRE), (Object) length(1, LengthUnit.FEET));
-        }
-
-        @Test
-        void shouldNotBeEqual_volumeVsWeight() {
-            assertNotEquals((Object) volume(1, VolumeUnit.LITRE), (Object) weight(1, WeightUnit.KILOGRAM));
-        }
-
-        @Test
-        void shouldNotBeEqual_weightVsLength() {
-            assertNotEquals((Object) weight(1, WeightUnit.KILOGRAM), (Object) length(1, LengthUnit.FEET));
-        }
-
-        @Test
-        void shouldHaveDifferentHashCodes_acrossCategories() {
-            assertNotEquals(
-                    volume(1, VolumeUnit.LITRE).hashCode(),
-                    weight(1, WeightUnit.KILOGRAM).hashCode());
-        }
-
-        @Test
-        void shouldThrowException_onSubtract_crossCategory() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> subtractCrossCategory(length(10, LengthUnit.FEET), weight(5, WeightUnit.KILOGRAM)));
-        }
-
-        @Test
-        void shouldThrowException_onDivide_crossCategory() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> divideCrossCategory(volume(10, VolumeUnit.LITRE), length(5, LengthUnit.FEET)));
-        }
-    }
-
-
-    // UC10: Constructor validation applies to all categories
-    @Nested
-    class ConstructorValidationTests {
-
-        @Test
-        void shouldThrowException_whenUnitIsNull() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> new Quantity<>(1.0, (LengthUnit) null));
-        }
-
-        @Test
-        void shouldThrowException_whenValueIsNaN() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> new Quantity<>(Double.NaN, LengthUnit.FEET));
-        }
-
-        @Test
-        void shouldThrowException_whenValueIsInfinite() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> new Quantity<>(Double.POSITIVE_INFINITY, WeightUnit.KILOGRAM));
-        }
-    }
-
-
-    // UC11: VolumeUnit enum conversion factor and method correctness
-    @Nested
-    class VolumeUnitEnumTests {
-
-        @Test
-        void shouldHaveCorrectConversionFactor_Litre() {
-            assertEquals(1.0, VolumeUnit.LITRE.getConversionFactor(), 1e-9);
-        }
-
-        @Test
-        void shouldHaveCorrectConversionFactor_Millilitre() {
-            assertEquals(0.001, VolumeUnit.MILLILITRE.getConversionFactor(), 1e-9);
-        }
-
-        @Test
-        void shouldHaveCorrectConversionFactor_Gallon() {
-            assertEquals(3.78541, VolumeUnit.GALLON.getConversionFactor(), 1e-5);
-        }
-
-        @Test
-        void shouldConvertToBaseUnit_MillilitreToLitre() {
-            assertEquals(1.0, VolumeUnit.MILLILITRE.convertToBaseUnit(1000.0), 1e-9);
-        }
-
-        @Test
-        void shouldConvertFromBaseUnit_LitreToMillilitre() {
-            assertEquals(1000.0, VolumeUnit.MILLILITRE.convertFromBaseUnit(1.0), 1e-9);
-        }
-
-        @Test
-        void shouldReturnCorrectUnitName() {
-            assertEquals("LITRE", VolumeUnit.LITRE.getUnitName());
-            assertEquals("MILLILITRE", VolumeUnit.MILLILITRE.getUnitName());
-            assertEquals("GALLON", VolumeUnit.GALLON.getUnitName());
-        }
-    }
-
-
-    // UC13: Centralized arithmetic via ArithmeticOperation enum and helper methods
-    @Nested
-    class CentralizedArithmeticTests {
-
-        @Test
-        void shouldThrowSameException_forNullOperand_acrossAllOperations() {
-            assertThrows(IllegalArgumentException.class, () -> length(10, LengthUnit.FEET).add(null));
-            assertThrows(IllegalArgumentException.class, () -> length(10, LengthUnit.FEET).subtract(null));
-            assertThrows(IllegalArgumentException.class, () -> length(10, LengthUnit.FEET).divide(null));
-        }
-
-        @Test
-        void shouldThrowException_forNullTargetUnit_addAndSubtract() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> length(10, LengthUnit.FEET).add(length(5, LengthUnit.FEET), null));
-            assertThrows(IllegalArgumentException.class,
-                    () -> length(10, LengthUnit.FEET).subtract(length(5, LengthUnit.FEET), null));
-        }
-
-        @Test
-        void shouldUseImplicitTargetUnit_forAddAndSubtract() {
-            assertEquals(LengthUnit.FEET,
-                    length(1, LengthUnit.FEET).add(length(12, LengthUnit.INCHES)).getUnit());
-            assertEquals(LengthUnit.FEET,
-                    length(10, LengthUnit.FEET).subtract(length(6, LengthUnit.INCHES)).getUnit());
-        }
-
-        @Test
-        void shouldUseExplicitTargetUnit_forAddAndSubtract() {
-            assertEquals(LengthUnit.INCHES,
-                    length(1, LengthUnit.FEET).add(length(12, LengthUnit.INCHES), LengthUnit.INCHES).getUnit());
-            assertEquals(LengthUnit.INCHES,
-                    length(10, LengthUnit.FEET).subtract(length(6, LengthUnit.INCHES), LengthUnit.INCHES).getUnit());
-        }
-
-        @Test
-        void shouldThrowArithmeticException_divideByZero_acrossAllCategories() {
-            assertThrows(ArithmeticException.class,
-                    () -> length(10, LengthUnit.FEET).divide(length(0, LengthUnit.FEET)));
-            assertThrows(ArithmeticException.class,
-                    () -> weight(10, WeightUnit.KILOGRAM).divide(weight(0, WeightUnit.KILOGRAM)));
-            assertThrows(ArithmeticException.class,
-                    () -> volume(10, VolumeUnit.LITRE).divide(volume(0, VolumeUnit.LITRE)));
-        }
-
-        @Test
-        void shouldNotRoundDivisionResult() {
-            double result = length(1, LengthUnit.FEET).divide(length(3, LengthUnit.FEET));
-            assertTrue(result > 0.333 && result < 0.334);
-        }
-
-        @Test
-        void shouldSatisfyAddSubtractInverse_acrossAllCategories() {
-            Quantity<LengthUnit> la = length(7, LengthUnit.FEET), lb = length(4, LengthUnit.FEET);
-            assertEquals(la, la.add(lb).subtract(lb));
-
-            Quantity<WeightUnit> wa = weight(7, WeightUnit.KILOGRAM), wb = weight(4, WeightUnit.KILOGRAM);
-            assertEquals(wa, wa.add(wb).subtract(wb));
-
-            Quantity<VolumeUnit> va = volume(7, VolumeUnit.LITRE), vb = volume(4, VolumeUnit.LITRE);
-            assertEquals(va, va.add(vb).subtract(vb));
-        }
-
-        @Test
-        void shouldSupportChainedArithmeticOperations() {
-            Quantity<LengthUnit> result = length(10, LengthUnit.FEET).subtract(length(4, LengthUnit.FEET));
-            assertEquals(3.0, result.divide(length(2, LengthUnit.FEET)), 1e-9);
-        }
-
-        @Test
-        void shouldNotMutateOriginals_acrossAllOperations() {
-            Quantity<LengthUnit> a = length(10, LengthUnit.FEET), b = length(3, LengthUnit.FEET);
-            a.add(b);
-            a.subtract(b);
-            a.divide(b);
-            assertEquals(length(10, LengthUnit.FEET), a);
-            assertEquals(length(3, LengthUnit.FEET), b);
-        }
-    }
-
-    @Nested
-    class TemperatureEqualityTests {
-
-        @Test
-        void shouldBeEqual_whenSameCelsiusValue() {
-            assertEquals(temp(25.0, TemperatureUnit.CELSIUS), temp(25.0, TemperatureUnit.CELSIUS));
-        }
-
-        @Test
-        void shouldBeEqual_whenSameFahrenheitValue() {
-            assertEquals(temp(32.0, TemperatureUnit.FAHRENHEIT), temp(32.0, TemperatureUnit.FAHRENHEIT));
-        }
-
-        @Test
-        void shouldBeEqual_whenSameKelvinValue() {
-            assertEquals(temp(273.15, TemperatureUnit.KELVIN), temp(273.15, TemperatureUnit.KELVIN));
-        }
-
-        @Test
-        void shouldBeEqual_whenCrossUnit_0Celsius_equals_32Fahrenheit() {
-            assertEquals(temp(0.0, TemperatureUnit.CELSIUS), temp(32.0, TemperatureUnit.FAHRENHEIT));
-        }
-
-        @Test
-        void shouldBeEqual_whenCrossUnit_100Celsius_equals_212Fahrenheit() {
-            assertEquals(temp(100.0, TemperatureUnit.CELSIUS), temp(212.0, TemperatureUnit.FAHRENHEIT));
-        }
-
-        @Test
-        void shouldBeEqual_whenCrossUnit_Negative40_equalPoint() {
-            assertEquals(temp(-40.0, TemperatureUnit.CELSIUS), temp(-40.0, TemperatureUnit.FAHRENHEIT));
-        }
-
-        @Test
-        void shouldBeEqual_whenCrossUnit_0Celsius_equals_27315Kelvin() {
-            assertEquals(temp(0.0, TemperatureUnit.CELSIUS), temp(273.15, TemperatureUnit.KELVIN));
-        }
-
-        @Test
-        void shouldBeEqual_whenCrossUnit_100Celsius_equals_37315Kelvin() {
-            assertEquals(temp(100.0, TemperatureUnit.CELSIUS), temp(373.15, TemperatureUnit.KELVIN));
-        }
-
-        @Test
-        void shouldBeEqual_whenCrossUnit_27315Kelvin_equals_32Fahrenheit() {
-            assertEquals(temp(273.15, TemperatureUnit.KELVIN), temp(32.0, TemperatureUnit.FAHRENHEIT));
-        }
-
-        @Test
-        void shouldBeEqual_whenCrossUnit_50Celsius_equals_122Fahrenheit() {
-            assertEquals(temp(50.0, TemperatureUnit.CELSIUS), temp(122.0, TemperatureUnit.FAHRENHEIT));
-        }
-
-        @Test
-        void shouldFollowSymmetricProperty() {
-            Quantity<TemperatureUnit> celsius = temp(0.0, TemperatureUnit.CELSIUS);
-            Quantity<TemperatureUnit> fahrenheit = temp(32.0, TemperatureUnit.FAHRENHEIT);
-            assertTrue(celsius.equals(fahrenheit) && fahrenheit.equals(celsius));
-        }
-
-        @Test
-        void shouldFollowReflexiveProperty() {
-            Quantity<TemperatureUnit> t = temp(100.0, TemperatureUnit.CELSIUS);
-            assertEquals(t, t);
-        }
-
-        @Test
-        void shouldFollowTransitiveProperty() {
-            Quantity<TemperatureUnit> a = temp(0.0, TemperatureUnit.CELSIUS);
-            Quantity<TemperatureUnit> b = temp(32.0, TemperatureUnit.FAHRENHEIT);
-            Quantity<TemperatureUnit> c = temp(273.15, TemperatureUnit.KELVIN);
-            assertTrue(a.equals(b) && b.equals(c) && a.equals(c));
-        }
-
-        @Test
-        void shouldNotBeEqual_whenDifferentCelsiusValues() {
-            assertNotEquals(temp(50.0, TemperatureUnit.CELSIUS), temp(100.0, TemperatureUnit.CELSIUS));
-        }
-
-        @Test
-        void shouldReturnFalse_whenComparedWithNull() {
-            assertNotEquals(temp(100.0, TemperatureUnit.CELSIUS), null);
-        }
-
-        @Test
-        void shouldBeEqual_whenAbsoluteZero_acrossUnits() {
-            // −273.15°C = 0 K = −459.67°F
-            assertEquals(temp(-273.15, TemperatureUnit.CELSIUS), temp(0.0, TemperatureUnit.KELVIN));
-        }
-    }
-
-
-    // UC14: Temperature conversion accuracy
-    @Nested
-    class TemperatureConversionTests {
-
-        @Test
-        void shouldConvertCelsiusToFahrenheit_boilingPoint() {
-            assertEquals(212.0,
-                    temp(100.0, TemperatureUnit.CELSIUS).convertTo(TemperatureUnit.FAHRENHEIT).getValue(), 1e-9);
-        }
-
-        @Test
-        void shouldConvertFahrenheitToCelsius_freezingPoint() {
-            assertEquals(0.0,
-                    temp(32.0, TemperatureUnit.FAHRENHEIT).convertTo(TemperatureUnit.CELSIUS).getValue(), 1e-9);
-        }
-
-        @Test
-        void shouldConvertKelvinToCelsius_freezingPoint() {
-            assertEquals(0.0,
-                    temp(273.15, TemperatureUnit.KELVIN).convertTo(TemperatureUnit.CELSIUS).getValue(), 1e-9);
-        }
-
-        @Test
-        void shouldConvertCelsiusToKelvin_freezingPoint() {
-            assertEquals(273.15,
-                    temp(0.0, TemperatureUnit.CELSIUS).convertTo(TemperatureUnit.KELVIN).getValue(), 1e-9);
-        }
-
-        @Test
-        void shouldConvertCelsiusToFahrenheit_equalPoint() {
-            assertEquals(-40.0,
-                    temp(-40.0, TemperatureUnit.CELSIUS).convertTo(TemperatureUnit.FAHRENHEIT).getValue(), 1e-9);
-        }
-
-        @Test
-        void shouldConvertFahrenheitToKelvin_boilingPoint() {
-            assertEquals(373.15,
-                    temp(212.0, TemperatureUnit.FAHRENHEIT).convertTo(TemperatureUnit.KELVIN).getValue(), 1e-9);
-        }
-
-        @Test
-        void shouldConvertCelsiusToFahrenheit_bodyTemp() {
-            assertEquals(98.6,
-                    temp(37.0, TemperatureUnit.CELSIUS).convertTo(TemperatureUnit.FAHRENHEIT).getValue(), 0.01);
-        }
-
-        @Test
-        void shouldConvertCelsiusToFahrenheit_negativeValue() {
-            assertEquals(-4.0,
-                    temp(-20.0, TemperatureUnit.CELSIUS).convertTo(TemperatureUnit.FAHRENHEIT).getValue(), 1e-9);
-        }
-
-        @Test
-        void shouldReturnSameInstance_whenConvertingToSameUnit() {
-            Quantity<TemperatureUnit> original = temp(100.0, TemperatureUnit.CELSIUS);
-            assertSame(original, original.convertTo(TemperatureUnit.CELSIUS));
-        }
-
-        @Test
-        void shouldSatisfyRoundTrip_CelsiusToFahrenheitAndBack() {
-            double original = 37.0;
-            double roundTripped = temp(original, TemperatureUnit.CELSIUS)
-                    .convertTo(TemperatureUnit.FAHRENHEIT)
-                    .convertTo(TemperatureUnit.CELSIUS)
-                    .getValue();
-            assertEquals(original, roundTripped, 1e-9);
-        }
-
-        @Test
-        void shouldSatisfyRoundTrip_CelsiusToKelvinAndBack() {
-            double original = 100.0;
-            double roundTripped = temp(original, TemperatureUnit.CELSIUS)
-                    .convertTo(TemperatureUnit.KELVIN)
-                    .convertTo(TemperatureUnit.CELSIUS)
-                    .getValue();
-            assertEquals(original, roundTripped, 1e-9);
-        }
-
-        @Test
-        void shouldConvertAbsoluteZero_CelsiusToKelvin() {
-            assertEquals(0.0,
-                    temp(-273.15, TemperatureUnit.CELSIUS).convertTo(TemperatureUnit.KELVIN).getValue(), 1e-9);
-        }
-
-        @Test
-        void shouldThrowException_whenTargetUnitIsNull() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> temp(100.0, TemperatureUnit.CELSIUS).convertTo(null));
-        }
-
-        @Test
-        void shouldReturnCorrectUnit_afterConversion() {
-            assertEquals(TemperatureUnit.FAHRENHEIT,
-                    temp(100.0, TemperatureUnit.CELSIUS).convertTo(TemperatureUnit.FAHRENHEIT).getUnit());
-        }
-    }
-
-
-    // UC14: Unsupported arithmetic operations on temperature
-    @Nested
-    class TemperatureUnsupportedOperationTests {
-
-        @Test
-        void shouldThrowUnsupportedOperationException_onAdd_Celsius() {
-            assertThrows(UnsupportedOperationException.class,
-                    () -> temp(100.0, TemperatureUnit.CELSIUS).add(temp(50.0, TemperatureUnit.CELSIUS)));
-        }
-
-        @Test
-        void shouldThrowUnsupportedOperationException_onSubtract_Celsius() {
-            assertThrows(UnsupportedOperationException.class,
-                    () -> temp(100.0, TemperatureUnit.CELSIUS).subtract(temp(50.0, TemperatureUnit.CELSIUS)));
-        }
-
-        @Test
-        void shouldThrowUnsupportedOperationException_onDivide_Celsius() {
-            assertThrows(UnsupportedOperationException.class,
-                    () -> temp(100.0, TemperatureUnit.CELSIUS).divide(temp(50.0, TemperatureUnit.CELSIUS)));
-        }
-
-        @Test
-        void shouldThrowUnsupportedOperationException_onAdd_Fahrenheit() {
-            assertThrows(UnsupportedOperationException.class,
-                    () -> temp(212.0, TemperatureUnit.FAHRENHEIT).add(temp(32.0, TemperatureUnit.FAHRENHEIT)));
-        }
-
-        @Test
-        void shouldThrowUnsupportedOperationException_onSubtract_Fahrenheit() {
-            assertThrows(UnsupportedOperationException.class,
-                    () -> temp(212.0, TemperatureUnit.FAHRENHEIT).subtract(temp(32.0, TemperatureUnit.FAHRENHEIT)));
-        }
-
-        @Test
-        void shouldThrowUnsupportedOperationException_onSubtract_Kelvin() {
-            assertThrows(UnsupportedOperationException.class,
-                    () -> temp(373.15, TemperatureUnit.KELVIN).subtract(temp(273.15, TemperatureUnit.KELVIN)));
-        }
-
-        @Test
-        void shouldThrowUnsupportedOperationException_onDivide_Kelvin() {
-            assertThrows(UnsupportedOperationException.class,
-                    () -> temp(373.15, TemperatureUnit.KELVIN).divide(temp(273.15, TemperatureUnit.KELVIN)));
-        }
-
-        @Test
-        void shouldThrowUnsupportedOperationException_onSubtractWithTargetUnit() {
-            assertThrows(UnsupportedOperationException.class,
-                    () -> temp(100.0, TemperatureUnit.CELSIUS)
-                            .subtract(temp(50.0, TemperatureUnit.CELSIUS), TemperatureUnit.CELSIUS));
-        }
-
-        @Test
-        void shouldThrowUnsupportedOperationException_onStaticAdd() {
-            assertThrows(UnsupportedOperationException.class,
-                    () -> Quantity.add(temp(100.0, TemperatureUnit.CELSIUS),
-                            temp(50.0, TemperatureUnit.CELSIUS),
-                            TemperatureUnit.CELSIUS));
-        }
-
-        @Test
-        void shouldContainDescriptiveMessage_onUnsupportedOperation() {
-            UnsupportedOperationException ex = assertThrows(UnsupportedOperationException.class,
-                    () -> temp(100.0, TemperatureUnit.CELSIUS).add(temp(50.0, TemperatureUnit.CELSIUS)));
-            assertNotNull(ex.getMessage());
-            assertFalse(ex.getMessage().isBlank());
-        }
-
-        @Test
-        void shouldThrowUnsupportedOperation_notNullPointer_forAdd() {
-            // Confirm the exception type is exactly UnsupportedOperationException, not NPE
-            Exception ex = assertThrows(UnsupportedOperationException.class,
-                    () -> temp(100.0, TemperatureUnit.CELSIUS).add(temp(0.0, TemperatureUnit.CELSIUS)));
-            assertInstanceOf(UnsupportedOperationException.class, ex);
-        }
-    }
-
-
-    // UC14: Temperature — cross-category type safety
-    @Nested
-    class TemperatureCrossCategoryTests {
-
-        @Test
-        void shouldNotBeEqual_temperatureVsLength() {
-            assertNotEquals((Object) temp(100.0, TemperatureUnit.CELSIUS),
-                    (Object) length(100.0, LengthUnit.FEET));
-        }
-
-        @Test
-        void shouldNotBeEqual_temperatureVsWeight() {
-            assertNotEquals((Object) temp(50.0, TemperatureUnit.CELSIUS),
-                    (Object) weight(50.0, WeightUnit.KILOGRAM));
-        }
-
-        @Test
-        void shouldNotBeEqual_temperatureVsVolume() {
-            assertNotEquals((Object) temp(25.0, TemperatureUnit.CELSIUS),
-                    (Object) volume(25.0, VolumeUnit.LITRE));
-        }
-
-        @Test
-        void shouldNotBeEqual_lengthVsTemperature() {
-            assertNotEquals((Object) length(100.0, LengthUnit.FEET),
-                    (Object) temp(100.0, TemperatureUnit.CELSIUS));
-        }
-    }
-
-
-    // UC14: SupportsArithmetic capability flag
-    @Nested
-    class OperationSupportTests {
-
-        @Test
-        void shouldThrowUnsupportedOperationException_whenValidateOperationCalledOnTemperature() {
-            assertThrows(UnsupportedOperationException.class,
-                    () -> TemperatureUnit.CELSIUS.validateOperationSupport("addition"));
-        }
-
-        @Test
-        void shouldNotThrow_whenValidateOperationCalledOnLength() {
-            assertDoesNotThrow(() -> LengthUnit.FEET.validateOperationSupport("ADD"));
-        }
-
-        @Test
-        void shouldNotThrow_whenValidateOperationCalledOnWeight() {
-            assertDoesNotThrow(() -> WeightUnit.KILOGRAM.validateOperationSupport("SUBTRACT"));
-        }
-
-        @Test
-        void shouldNotThrow_whenValidateOperationCalledOnVolume() {
-            assertDoesNotThrow(() -> VolumeUnit.LITRE.validateOperationSupport("DIVIDE"));
-        }
-    }
-
-
-    // UC14: TemperatureUnit enum structure
-    @Nested
-    class TemperatureUnitEnumTests {
-
-        @Test
-        void shouldHaveCorrectUnitName_Celsius() {
-            assertEquals("Celsius", TemperatureUnit.CELSIUS.getUnitName());
-        }
-
-        @Test
-        void shouldHaveCorrectUnitName_Fahrenheit() {
-            assertEquals("Fahrenheit", TemperatureUnit.FAHRENHEIT.getUnitName());
-        }
-
-        @Test
-        void shouldHaveCorrectUnitName_Kelvin() {
-            assertEquals("Kelvin", TemperatureUnit.KELVIN.getUnitName());
-        }
-
-        @Test
-        void shouldImplementIMeasurable() {
-            assertTrue(TemperatureUnit.CELSIUS instanceof IMeasurable);
-        }
-
-
-        @Test
-        void shouldConvertToBaseUnit_CelsiusToKelvin() {
-            assertEquals(373.15, TemperatureUnit.CELSIUS.convertToBaseUnit(100.0), 1e-9);
-        }
-
-        @Test
-        void shouldConvertFromBaseUnit_KelvinToCelsius() {
-            assertEquals(100.0, TemperatureUnit.CELSIUS.convertFromBaseUnit(373.15), 1e-9);
-        }
-
-        @Test
-        void shouldConvertToBaseUnit_FahrenheitToKelvin() {
-            assertEquals(373.15, TemperatureUnit.FAHRENHEIT.convertToBaseUnit(212.0), 1e-9);
-        }
-
-        @Test
-        void shouldConvertFromBaseUnit_KelvinToFahrenheit() {
-            assertEquals(212.0, TemperatureUnit.FAHRENHEIT.convertFromBaseUnit(373.15), 1e-9);
-        }
-
-        @Test
-        void shouldConvertToBaseUnit_KelvinIdentity() {
-            assertEquals(300.0, TemperatureUnit.KELVIN.convertToBaseUnit(300.0), 1e-9);
-        }
-    }
-
-
-    // UC14: Constructor validation for TemperatureUnit
-    @Nested
-    class TemperatureConstructorValidationTests {
-
-        @Test
-        void shouldThrowException_whenTemperatureUnitIsNull() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> new Quantity<>(100.0, (TemperatureUnit) null));
-        }
-
-        @Test
-        void shouldThrowException_whenTemperatureValueIsNaN() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> new Quantity<>(Double.NaN, TemperatureUnit.CELSIUS));
-        }
-
-        @Test
-        void shouldThrowException_whenTemperatureValueIsInfinite() {
-            assertThrows(IllegalArgumentException.class,
-                    () -> new Quantity<>(Double.POSITIVE_INFINITY, TemperatureUnit.FAHRENHEIT));
-        }
-
-        @Test
-        void shouldReturnFalse_whenEqualsNull() {
-            assertNotEquals(temp(100.0, TemperatureUnit.CELSIUS), null);
-        }
-    }
-
-
-    // UC14: Backward compatibility — UC1–UC13 unaffected by UC14 changes
-    @Nested
-    class BackwardCompatibilityTests {
-
-        @Test
-        void shouldStillAddLength_afterUC14Refactoring() {
-            assertEquals(length(2, LengthUnit.FEET),
-                    length(1, LengthUnit.FEET).add(length(12, LengthUnit.INCHES)));
-        }
-
-        @Test
-        void shouldStillSubtractWeight_afterUC14Refactoring() {
-            assertEquals(weight(5, WeightUnit.KILOGRAM),
-                    weight(10, WeightUnit.KILOGRAM).subtract(weight(5000, WeightUnit.GRAM)));
-        }
-
-        @Test
-        void shouldStillDivideVolume_afterUC14Refactoring() {
-            assertEquals(1.0,
-                    volume(1000, VolumeUnit.MILLILITRE).divide(volume(1, VolumeUnit.LITRE)), 1e-9);
-        }
-
-        @Test
-        void shouldStillConvertLength_afterUC14Refactoring() {
-            assertEquals(length(12, LengthUnit.INCHES),
-                    length(1, LengthUnit.FEET).convertTo(LengthUnit.INCHES));
-        }
-
-        @Test
-        void shouldStillCompareCrossUnit_weight_afterUC14Refactoring() {
-            assertEquals(weight(1, WeightUnit.KILOGRAM), weight(1000, WeightUnit.GRAM));
-        }
-
-        @Test
-        void shouldIMeasurableDefaultsStillWork_forLength() {
-            assertDoesNotThrow(() -> LengthUnit.FEET.validateOperationSupport("ADD"));
-        }
-    }
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import com.apps.quantitymeasurement.exception.InvalidUnitMeasurementException;
+import com.apps.quantitymeasurement.quantity.Quantity;
+import com.apps.quantitymeasurement.unit.IMeasurable;
+import com.apps.quantitymeasurement.unit.LengthUnit;
+import com.apps.quantitymeasurement.unit.TemperatureUnit;
+import com.apps.quantitymeasurement.unit.VolumeUnit;
+import com.apps.quantitymeasurement.unit.WeightUnit;
+
+class QuantityMeasurementMainTest<U extends IMeasurable> {
+
+	Quantity<LengthUnit> len1;
+	Quantity<LengthUnit> len2;
+
+	Quantity<WeightUnit> w1;
+	Quantity<WeightUnit> w2;
+
+	Quantity<VolumeUnit> v1;
+	Quantity<VolumeUnit> v2;
+
+	Quantity<TemperatureUnit> t1;
+	Quantity<TemperatureUnit> t2;
+
+	@Test
+	public void testEquality_SameUnitAndValue_ShouldReturnTrue() throws InvalidUnitMeasurementException {
+		Quantity<LengthUnit> feet1 = new Quantity<>(10.0, LengthUnit.FEET);
+		Quantity<LengthUnit> feet2 = new Quantity<>(10.0, LengthUnit.FEET);
+
+		// Using the new Generic App Logic
+		assertTrue(QuantityMeasurementApp.demonstrateEquality(feet1, feet2));
+	}
+
+	@Test
+	public void testEquality_DifferentUnitsSameValue_ShouldReturnTrue() throws InvalidUnitMeasurementException {
+		Quantity<LengthUnit> oneFeet = new Quantity<>(1.0, LengthUnit.FEET);
+		Quantity<LengthUnit> twelveInches = new Quantity<>(12.0, LengthUnit.INCHES);
+
+		assertTrue(QuantityMeasurementApp.demonstrateEquality(oneFeet, twelveInches));
+	}
+
+	@Test
+	public void testEquality_DifferentValues_ShouldReturnFalse() throws InvalidUnitMeasurementException {
+		Quantity<LengthUnit> feet1 = new Quantity<>(10.0, LengthUnit.FEET);
+		Quantity<LengthUnit> feet2 = new Quantity<>(1.1, LengthUnit.FEET);
+
+		assertFalse(QuantityMeasurementApp.demonstrateEquality(feet1, feet2));
+	}
+
+	@Test
+	public void testEquality_NullComparison_ShouldThrowException() {
+		Quantity<LengthUnit> feet1 = new Quantity<>(1.0, LengthUnit.FEET);
+
+		assertThrows(InvalidUnitMeasurementException.class, () -> {
+			QuantityMeasurementApp.demonstrateEquality(feet1, null);
+		});
+	}
+
+	@Test
+	public void testEquality_SameReference_ShouldReturnTrue() throws InvalidUnitMeasurementException {
+		Quantity<LengthUnit> feet1 = new Quantity<>(1.0, LengthUnit.FEET);
+		Quantity<LengthUnit> feet2 = feet1;
+
+		assertTrue(QuantityMeasurementApp.demonstrateEquality(feet1, feet2));
+	}
+
+	// --- Conversion Tests ---
+
+	@Test
+	public void testConversion_YardToInches() throws InvalidUnitMeasurementException {
+		Quantity<LengthUnit> yard = new Quantity<>(1.0, LengthUnit.YARD);
+		Quantity<LengthUnit> result = QuantityMeasurementApp.demonstrateConversion(yard, LengthUnit.INCHES);
+
+		assertEquals(36.0, result.getValue(), 0.01);
+		assertEquals(LengthUnit.INCHES, result.getUnit());
+	}
+
+	@Test
+	public void testConversion_FeetToCm() throws InvalidUnitMeasurementException {
+		Quantity<LengthUnit> foot = new Quantity<>(1.0, LengthUnit.FEET);
+		Quantity<LengthUnit> result = QuantityMeasurementApp.demonstrateConversion(foot, LengthUnit.CENTIMETERS);
+
+		assertEquals(30.48, result.getValue(), 0.01);
+	}
+
+	// --- Addition Tests ---
+
+	@Test
+	public void testAddition_TwoDifferentUnits() throws InvalidUnitMeasurementException {
+		Quantity<LengthUnit> feet = new Quantity<>(1.0, LengthUnit.FEET); // 12 inches
+		Quantity<LengthUnit> inches = new Quantity<>(2.0, LengthUnit.INCHES);
+
+		// Assuming demonstrateAddition returns sum in a default or base unit
+		Quantity<LengthUnit> sum = QuantityMeasurementApp.demonstrateAddition(feet, inches);
+		Quantity<LengthUnit> target = new Quantity<>(14.0, LengthUnit.INCHES);
+		// If the sum converts both to inches: 12 + 2 = 14
+		assertTrue(sum.equals(target));
+	}
+
+	@ParameterizedTest
+	@ValueSource(doubles = { 1.0, 2.0, 5.0 })
+	public void testMultipleFeetToInchesEquality(double value) throws InvalidUnitMeasurementException {
+		Quantity<LengthUnit> feet = new Quantity<>(value, LengthUnit.FEET);
+		Quantity<LengthUnit> inches = new Quantity<>(value * 12, LengthUnit.INCHES);
+
+		assertTrue(QuantityMeasurementApp.demonstrateEquality(feet, inches));
+	}
+
+	// Yard
+
+	@Test
+	public void yardEquals36Inches() {
+		assertTrue(new Quantity<LengthUnit>(1.0, LengthUnit.YARD)
+				.equals(new Quantity<LengthUnit>(36.0, LengthUnit.INCHES)));
+	}
+
+	@Test
+	public void centimeterEquals39Point3701Inches() {
+		assertTrue(new Quantity<LengthUnit>(100.0, LengthUnit.CENTIMETERS)
+				.equals(new Quantity<LengthUnit>(39.37, LengthUnit.INCHES)));
+	}
+
+	@Test
+	public void threeFeetEqualsOneYard() {
+		assertTrue(
+				new Quantity<LengthUnit>(3.0, LengthUnit.FEET).equals(new Quantity<LengthUnit>(1.0, LengthUnit.YARD)));
+	}
+
+	@Test
+	public void thirtyPoint48CmEqualsOneFoot() {
+		assertTrue(new Quantity<LengthUnit>(30.48, LengthUnit.CENTIMETERS)
+				.equals(new Quantity<LengthUnit>(1.0, LengthUnit.FEET)));
+	}
+
+	@Test
+	public void yardNotEqualToInches() {
+		assertFalse(new Quantity<LengthUnit>(100.0, LengthUnit.YARD)
+				.equals(new Quantity<LengthUnit>(39.37, LengthUnit.INCHES)));
+	}
+
+	@Test
+	public void referenceEqualitySameObject() {
+		len1 = new Quantity<LengthUnit>(1.0, LengthUnit.YARD);
+		len2 = len1;
+		assertTrue(len1.equals(len1));
+	}
+
+	@Test
+	public void equalsReturnsFalseForNull() {
+		len1 = new Quantity<LengthUnit>(1.0, LengthUnit.YARD);
+		assertFalse(len1.equals(null));
+	}
+
+	@Test
+	public void reflexiveSymmetricAndTransitiveProperty() {
+		Quantity<LengthUnit> a = new Quantity<>(1.0, LengthUnit.YARD);
+		Quantity<LengthUnit> b = new Quantity<>(3.0, LengthUnit.FEET);
+		Quantity<LengthUnit> c = new Quantity<>(36.0, LengthUnit.INCHES);
+
+		// Reflexive
+		assertTrue(a.equals(a));
+
+		// Symmetric
+		assertTrue(a.equals(b));
+		assertTrue(b.equals(a));
+
+		// Transitive
+		assertTrue(a.equals(b));
+		assertTrue(b.equals(c));
+		assertTrue(a.equals(c));
+	}
+
+	@Test
+	public void differentValuesSameUnitNotEqual() {
+		assertFalse(new Quantity<LengthUnit>(10.5, LengthUnit.FEET)
+				.equals(new Quantity<LengthUnit>(123.2, LengthUnit.FEET)));
+	}
+
+	@Test
+	public void crossUnitEqualityDemonstrateMethod() {
+		Quantity<LengthUnit> yard = new Quantity<LengthUnit>(1.0, LengthUnit.YARD);
+		Quantity<LengthUnit> inch = new Quantity<LengthUnit>(36.0, LengthUnit.INCHES);
+
+		assertTrue(yard.equals(inch));
+	}
+
+	@Test
+	public void convertFeetToInches() throws InvalidUnitMeasurementException {
+		Quantity<LengthUnit> lengthInches = QuantityMeasurementApp
+				.demonstrateConversion(new Quantity<>(3.0, LengthUnit.FEET), LengthUnit.INCHES);
+		Quantity<LengthUnit> expectedInches = new Quantity<LengthUnit>(36.0, LengthUnit.INCHES);
+		assertTrue(QuantityMeasurementApp.demonstrateEquality(lengthInches, expectedInches));
+	}
+
+	@Test
+	public void convertYardToInchesUsingOverloadMethod() throws InvalidUnitMeasurementException {
+		Quantity<LengthUnit> lengthInYard = new Quantity<LengthUnit>(2.0, LengthUnit.YARD);
+		Quantity<LengthUnit> lengthInInches = QuantityMeasurementApp.demonstrateConversion(lengthInYard,
+				LengthUnit.INCHES);
+		Quantity<LengthUnit> expected = new Quantity<LengthUnit>(72.0, LengthUnit.INCHES);
+		assertTrue(QuantityMeasurementApp.demonstrateEquality(lengthInInches, expected));
+	}
+
+	@Test
+	public void addFeetAndInches() throws InvalidUnitMeasurementException {
+		Quantity<LengthUnit> Feet = new Quantity<>(1.0, LengthUnit.FEET);
+		Quantity<LengthUnit> Inches = new Quantity<>(24.0, LengthUnit.INCHES);
+		Quantity<LengthUnit> output = QuantityMeasurementApp.demonstrateAddition(Feet, Inches);
+		Quantity<LengthUnit> result = new Quantity<>(3.0, LengthUnit.FEET);
+		assertTrue(output.equals(result));
+	}
+
+	@Test
+	void addFeetAndInchesWithTargetUnitInches() throws InvalidUnitMeasurementException {
+		Quantity<LengthUnit> Feet = new Quantity<>(1.0, LengthUnit.FEET);
+		Quantity<LengthUnit> Inches = new Quantity<>(24.0, LengthUnit.INCHES);
+		Quantity<LengthUnit> output = QuantityMeasurementApp.demonstrateAddition(Feet, Inches, LengthUnit.INCHES);
+		Quantity<LengthUnit> result = new Quantity<>(3.0, LengthUnit.FEET);
+		assertTrue(output.equals(result));
+	}
+
+	// Verifies that Quantity(1.0, KILOGRAM).equals(Quantity(1.0, KILOGRAM)) returns
+	// true.
+	// Tests: equals() returns true for identical kilogram measurements.
+	@Test
+	public void testEquality_KilogramToKilogram_SameValue() {
+		w1 = new Quantity<>(1.0, WeightUnit.KILOGRAM);
+		w2 = new Quantity<>(1.0, WeightUnit.KILOGRAM);
+		assertTrue(w1.equals(w2));
+	}
+
+	// Verifies that Quantity(1.0, KILOGRAM).equals(Quantity(2.0, KILOGRAM)) returns
+	// false.
+	// Tests: equals() returns false for different kilogram measurements.
+	@Test
+	public void testEquality_KilogramToKilogram_DifferentValue() {
+		w1 = new Quantity<>(12.0, WeightUnit.KILOGRAM);
+		w2 = new Quantity<>(1.0, WeightUnit.KILOGRAM);
+		assertFalse(w1.equals(w2));
+	}
+
+	// Verifies that Quantity(1.0, KILOGRAM).equals(Quantity(1000.0, GRAM)) returns
+	// true.
+	// Tests: equals() returns true for kilogram-to-gram conversion.
+	@Test
+	public void testEquality_KilogramToGram_EquivalentValue() {
+		w1 = new Quantity<>(12.0, WeightUnit.KILOGRAM);
+		w2 = new Quantity<>(12000.0, WeightUnit.GRAM);
+		assertTrue(w1.equals(w2));
+	}
+
+	// Verifies that Quantity(1000.0, GRAM).equals(Quantity(1.0, KILOGRAM)) returns
+	// true.
+	// Tests: equals() returns true (tests symmetry of conversion).
+	@Test
+	public void testEquality_GramToKilogram_EquivalentValue() {
+		w1 = new Quantity<>(12000.0, WeightUnit.GRAM);
+		w2 = new Quantity<>(12.0, WeightUnit.KILOGRAM);
+		assertTrue(w1.equals(w2));
+	}
+
+	// Verifies that Quantity(1.0, KILOGRAM).equals(Quantity(1.0, FOOT)) returns
+	// false.
+	// Tests: equals() returns false when comparing incompatible measurement
+	// categories.
+	@Test
+	public void testEquality_WeightVsLength_Incompatible() {
+		w1 = new Quantity<>(10.0, WeightUnit.KILOGRAM);
+		len1 = new Quantity<>(1.0, LengthUnit.FEET);
+		assertFalse(w1.equals(w2));
+	}
+
+	// Verifies that Quantity(1.0, KILOGRAM).equals(null) returns false.
+	// Tests: equals() returns false when comparing with null.
+	@Test
+	public void testEquality_NullComparison() {
+		w1 = new Quantity<>(10.0, WeightUnit.KILOGRAM);
+		assertFalse(w1.equals(null));
+	}
+
+	// Verifies that a weight object equals itself (reflexive property).
+	// Tests: equals() returns true when comparing an object with itself.
+	@Test
+	public void testEquality_SameReference() {
+		w1 = new Quantity<>(12000.0, WeightUnit.GRAM);
+		w2 = w1;
+		assertTrue(w1.equals(w2));
+	}
+
+	// Verifies that Quantity(1.0, null) throws IllegalArgumentException.
+	// Tests: Exception thrown for null unit in constructor.
+	@Test
+	public void testEquality_NullUnit() {
+		assertThrows(IllegalArgumentException.class, () -> {
+			w1 = new Quantity<>(12000.0, null);
+		});
+	}
+
+	// Verifies transitive property: if A equals B and B equals C, then A equals C.
+	// Example: Quantity(1.0, KILOGRAM) equals Quantity(1000.0, GRAM) and
+	// Quantity(1000.0, GRAM) equals Quantity(1.0, KILOGRAM), therefore
+	// Quantity(1.0, KILOGRAM) equals Quantity(1.0, KILOGRAM).
+	@Test
+	public void testEquality_TransitiveProperty() {
+		w1 = new Quantity<>(12000.0, WeightUnit.GRAM);
+		w2 = new Quantity<>(12.0, WeightUnit.KILOGRAM);
+		assertTrue((w1.equals(w2)) && (w2.equals(w1)));
+	}
+
+	// Verifies that Quantity(0.0, KILOGRAM).equals(Quantity(0.0, GRAM)) returns
+	// true.
+	// Tests: Zero values are considered equal across units.
+	@Test
+	public void testEquality_ZeroValue() {
+		w1 = new Quantity<>(0.0, WeightUnit.KILOGRAM);
+		w2 = new Quantity<>(0.0, WeightUnit.GRAM);
+		assertTrue(w1.equals(w2));
+	}
+
+	// Verifies that Quantity(-1.0, KILOGRAM).equals(Quantity(-1000.0, GRAM))
+	// returns true.
+	// Tests: Negative weight values are handled correctly in conversions.
+	@Test
+	public void testEquality_NegativeWeight() {
+		w1 = new Quantity<>(-1.0, WeightUnit.KILOGRAM);
+		w2 = new Quantity<>(-1000.0, WeightUnit.GRAM);
+		assertTrue(w1.equals(w2));
+	}
+
+	// Verifies that Quantity(1000000.0, GRAM).equals(Quantity(1000.0, KILOGRAM))
+	// returns true.
+	// Tests: Large magnitude values maintain precision across conversions.
+	@Test
+	public void testEquality_LargeWeightValue() {
+		w1 = new Quantity<>(1000000.0, WeightUnit.GRAM);
+		w2 = new Quantity<>(1000.0, WeightUnit.KILOGRAM);
+		assertTrue(w1.equals(w2));
+	}
+
+	// Verifies that Quantity(0.001, KILOGRAM).equals(Quantity(1.0, GRAM)) returns
+	// true.
+	// Tests: Small magnitude values maintain precision across conversions.
+	@Test
+	public void testEquality_SmallWeightValue() {
+		w1 = new Quantity<>(0.001, WeightUnit.KILOGRAM);
+		w2 = new Quantity<>(1.0, WeightUnit.GRAM);
+		assertTrue(w1.equals(w2));
+	}
+
+	// Verifies that Quantity(2.20462, POUND).convertTo(KILOGRAM) returns
+	// Quantity(~1.0, KILOGRAM) (within epsilon).
+	// Tests: Conversion from pound to kilogram.
+	@Test
+	public void testConversion_PoundToKilogram() throws InvalidUnitMeasurementException {
+		w1 = new Quantity<>(2.20462, WeightUnit.POUND);
+		Quantity<WeightUnit> output = QuantityMeasurementApp.demonstrateConversion(w1, WeightUnit.KILOGRAM);
+		Quantity<WeightUnit> result = new Quantity<>(1.0, WeightUnit.KILOGRAM);
+		assertTrue(output.equals(result));
+	}
+
+	// Verifies that Quantity(1.0, KILOGRAM).convertTo(POUND) returns
+	// Quantity(~2.20462, POUND) (within epsilon).
+	// Tests: Conversion from kilogram to pound.
+	@Test
+	public void testConversion_KilogramToPound() throws InvalidUnitMeasurementException {
+		w1 = new Quantity<>(1.0, WeightUnit.KILOGRAM);
+		Quantity<WeightUnit> output = QuantityMeasurementApp.demonstrateConversion(w1, WeightUnit.POUND);
+		Quantity<WeightUnit> result = new Quantity<>(2.20462, WeightUnit.POUND);
+		assertTrue(output.equals(result));
+	}
+
+	// Verifies that Quantity(5.0, KILOGRAM).convertTo(KILOGRAM) returns
+	// Quantity(5.0, KILOGRAM).
+	// Tests: Converting to the same unit returns unchanged value.
+	@Test
+	public void testConversion_SameUnit() throws InvalidUnitMeasurementException {
+		w1 = new Quantity<>(5.0, WeightUnit.KILOGRAM);
+		Quantity<WeightUnit> output = QuantityMeasurementApp.demonstrateConversion(w1, WeightUnit.KILOGRAM);
+		Quantity<WeightUnit> result = new Quantity<>(5.0, WeightUnit.KILOGRAM);
+		assertTrue(output.equals(result));
+	}
+
+	// Verifies that Quantity(0.0, KILOGRAM).convertTo(GRAM) returns Quantity(0.0,
+	// GRAM).
+	// Tests: Zero value conversion across units.
+	@Test
+	public void testConversion_ZeroValue() throws InvalidUnitMeasurementException {
+		w1 = new Quantity<>(0.0, WeightUnit.KILOGRAM);
+		Quantity<WeightUnit> output = QuantityMeasurementApp.demonstrateConversion(w1, WeightUnit.GRAM);
+		Quantity<WeightUnit> result = new Quantity<>(0.0, WeightUnit.GRAM);
+		assertTrue(output.equals(result));
+	}
+
+	// Verifies that Quantity(-1.0, KILOGRAM).convertTo(GRAM) returns
+	// Quantity(-1000.0, GRAM).
+	// Tests: Negative weight conversion preserves sign.
+	@Test
+	public void testConversion_NegativeValue() throws InvalidUnitMeasurementException {
+		w1 = new Quantity<>(-1.0, WeightUnit.KILOGRAM);
+		Quantity<WeightUnit> output = QuantityMeasurementApp.demonstrateConversion(w1, WeightUnit.GRAM);
+		Quantity<WeightUnit> result = new Quantity<>(-1000.0, WeightUnit.GRAM);
+		assertTrue(output.equals(result));
+	}
+
+	// Verifies that Quantity (1.5, KILOGRAM).convertTo(GRAM) .convertTo(KILOGRAM)
+	// returns Quantity(~1.5, KILOGRAM) (within epsilon).
+	// Tests: Round-trip conversions preserve value within floating-point tolerance.
+	@Test
+	public void testConversion_RoundTrip() throws InvalidUnitMeasurementException {
+		w1 = new Quantity<>(1.5, WeightUnit.KILOGRAM);
+		Quantity<WeightUnit> output = QuantityMeasurementApp.demonstrateConversion(w1, WeightUnit.GRAM);
+		Quantity<WeightUnit> result = new Quantity<>(1.5, WeightUnit.KILOGRAM);
+		assertTrue(output.equals(result));
+	}
+
+	// Verifies that Quantity(1.0, KILOGRAM).add(Quantity(2.0, KILOGRAM)) returns
+	// Quantity(3.0, KILOGRAM).
+	// Tests: Same-unit addition without conversion.
+	@Test
+	public void testAddition_SameUnit_KilogramPlusKilogram() throws InvalidUnitMeasurementException {
+		w1 = new Quantity<>(1.0, WeightUnit.KILOGRAM);
+		w2 = new Quantity<>(2.0, WeightUnit.KILOGRAM);
+		Quantity<WeightUnit> output = QuantityMeasurementApp.demonstrateAddition(w1, w2);
+		Quantity<WeightUnit> result = new Quantity<>(3.0, WeightUnit.KILOGRAM);
+		assertTrue(output.equals(result));
+	}
+
+	// Verifies that Quantity(1.0, KILOGRAM).equals(Quantity(1.0, KILOGRAM)) returns
+	// true.
+	// Tests: equals() returns true for identical kilogram measurements.
+	@Test
+	public void testAddition_CrossUnit_KilogramPlusGram() throws InvalidUnitMeasurementException {
+		w1 = new Quantity<>(1.0, WeightUnit.KILOGRAM);
+		w2 = new Quantity<>(1.0, WeightUnit.KILOGRAM);
+		assertTrue(w1.equals(w2));
+	}
+
+	// Verifies that Quantity(1.0, KILOGRAM).add(Quantity(1000.0, GRAM)) returns
+	// Quantity(2.0, KILOGRAM).
+	// Tests: Cross-unit addition will result in the first operand's unit.
+	@Test
+	public void testLengthUnitEnum_InchesConstant() throws InvalidUnitMeasurementException {
+		w1 = new Quantity<>(1.0, WeightUnit.KILOGRAM);
+		w2 = new Quantity<>(1000.0, WeightUnit.GRAM);
+		Quantity<WeightUnit> output = QuantityMeasurementApp.demonstrateAddition(w1, w2);
+		Quantity<WeightUnit> result = new Quantity<>(2.0, WeightUnit.KILOGRAM);
+		assertTrue(output.equals(result));
+	}
+
+	// Verifies that Quantity(2.20462, POUND).add(Quantity(1.0, KILOGRAM)) returns
+	// Quantity(~4.40924, POUND).
+	// Tests: Cross-unit addition with mixed metric and imperial units.
+	@Test
+	public void testAddition_CrossUnit_PoundPlusKilogram() throws InvalidUnitMeasurementException {
+		w1 = new Quantity<>(2.20462, WeightUnit.POUND);
+		w2 = new Quantity<>(1.0, WeightUnit.KILOGRAM);
+		Quantity<WeightUnit> output = QuantityMeasurementApp.demonstrateAddition(w1, w2);
+		Quantity<WeightUnit> result = new Quantity<>(4.40924, WeightUnit.POUND);
+		assertTrue(output.equals(result));
+	}
+
+	// Verifies that Quantity(1.0, KILOGRAM).add(Quantity(1000.0, GRAM), GRAM)
+	// returns Quantity(2000.0, GRAM).
+	// Tests: Explicit target unit specification in gram.
+	@Test
+	public void testAddition_ExplicitTargetUnit_Kilogram() throws InvalidUnitMeasurementException {
+		w1 = new Quantity<>(1.0, WeightUnit.KILOGRAM);
+		w2 = new Quantity<>(1000.0, WeightUnit.GRAM);
+		Quantity<WeightUnit> output = QuantityMeasurementApp.demonstrateAddition(w1, w2, WeightUnit.GRAM);
+		Quantity<WeightUnit> result = new Quantity<>(2000.0, WeightUnit.GRAM);
+		assertTrue(output.equals(result));
+	}
+
+	// Verifies that Quantity(1.0, KILOGRAM).add(Quantity(1000.0, GRAM)) equals
+	// Quantity(1000.0, GRAM).add(Quantity(1.0, KILOGRAM)) in their respective
+	// units.
+	// Tests: Addition is commutative with appropriate unit conversions.
+	@Test
+	public void testAddition_Commutativity() throws InvalidUnitMeasurementException {
+		w1 = new Quantity<>(1.0, WeightUnit.KILOGRAM);
+		w2 = new Quantity<>(1000.0, WeightUnit.GRAM);
+		Quantity<WeightUnit> output1 = QuantityMeasurementApp.demonstrateAddition(w1, w2);
+		Quantity<WeightUnit> output2 = QuantityMeasurementApp.demonstrateAddition(w2, w1);
+		assertTrue(output1.equals(output2));
+	}
+
+	// Verifies that Quantity(5.0, KILOGRAM).add(Quantity(0.0, GRAM)) returns
+	// Quantity(5.0, KILOGRAM).
+	// Tests: Adding zero acts as an identity element.
+	@Test
+	public void testAddition_WithZero() throws InvalidUnitMeasurementException {
+		w1 = new Quantity<>(5.0, WeightUnit.KILOGRAM);
+		w2 = new Quantity<>(0.0, WeightUnit.GRAM);
+		Quantity<WeightUnit> output1 = QuantityMeasurementApp.demonstrateAddition(w1, w2);
+		Quantity<WeightUnit> result = new Quantity<>(5.0, WeightUnit.KILOGRAM);
+		assertTrue(output1.equals(result));
+	}
+
+	// Verifies that Quantity(5.0, KILOGRAM).add(Quantity(-2000.0, GRAM)) returns
+	// Quantity(3.0, KILOGRAM).
+	// Tests: Addition with negative measurements.
+	@Test
+	public void testAddition_NegativeValues() throws InvalidUnitMeasurementException {
+		w1 = new Quantity<>(5.0, WeightUnit.KILOGRAM);
+		w2 = new Quantity<>(-2000.0, WeightUnit.GRAM);
+		Quantity<WeightUnit> output1 = QuantityMeasurementApp.demonstrateAddition(w1, w2);
+		Quantity<WeightUnit> result = new Quantity<>(3.0, WeightUnit.KILOGRAM);
+		assertTrue(output1.equals(result));
+	}
+
+	// Verifies that Quantity(1e6, KILOGRAM).add(Quantity(1e6, KILOGRAM)) returns
+	// Quantity(2e6, KILOGRAM).
+	// Tests: Addition with large magnitude values.
+	@Test
+	public void testAddition_LargeValues() throws InvalidUnitMeasurementException {
+		w1 = new Quantity<>(1e6, WeightUnit.KILOGRAM);
+		w2 = new Quantity<>(1e6, WeightUnit.KILOGRAM);
+		Quantity<WeightUnit> output1 = QuantityMeasurementApp.demonstrateAddition(w1, w2);
+		Quantity<WeightUnit> result = new Quantity<>(2e6, WeightUnit.KILOGRAM);
+		assertTrue(output1.equals(result));
+	}
+
+	// UC-11
+
+	@Test
+	public void testEquality_LitreToLitre_SameValue() {
+		v1 = new Quantity<>(1.0, VolumeUnit.LITRE);
+		v2 = new Quantity<>(1.0, VolumeUnit.LITRE);
+		assertTrue(v1.equals(v2));
+	}
+
+	@Test
+	public void testEquality_LitreToLitre_DifferentValue() {
+		v1 = new Quantity<>(1.0, VolumeUnit.LITRE);
+		v2 = new Quantity<>(2.0, VolumeUnit.LITRE);
+		assertFalse(v1.equals(v2));
+	}
+
+	@Test
+	public void testEquality_LitreToMillilitre_EquivalentValue() {
+		v1 = new Quantity<>(1.0, VolumeUnit.LITRE);
+		v2 = new Quantity<>(1000.0, VolumeUnit.MILLILITRE);
+		assertTrue(v1.equals(v2));
+	}
+
+	@Test
+	public void testEquality_MillilitreToLitre_EquivalentValue() {
+		v1 = new Quantity<>(1000.0, VolumeUnit.MILLILITRE);
+		v2 = new Quantity<>(1.0, VolumeUnit.LITRE);
+		assertTrue(v1.equals(v2));
+	}
+
+	@Test
+	public void testEquality_LitreToGallon_EquivalentValue() {
+		v1 = new Quantity<>(3.78541, VolumeUnit.LITRE);
+		v2 = new Quantity<>(1.0, VolumeUnit.GALLON);
+		assertTrue(v1.equals(v2));
+	}
+
+	@Test
+	public void testEquality_GallonToLitre_EquivalentValue() {
+		v1 = new Quantity<>(1.0, VolumeUnit.GALLON);
+		v2 = new Quantity<>(3.78541, VolumeUnit.LITRE);
+		assertTrue(v1.equals(v2));
+	}
+
+	@Test
+	public void testEquality_VolumeVsLength_Incompatible() {
+		v1 = new Quantity<>(1.0, VolumeUnit.GALLON);
+		len2 = new Quantity<>(3.78541, LengthUnit.FEET);
+		assertFalse(v1.equals(v2));
+	}
+
+	@Test
+	public void testEquality_VolumeVsWeight_Incompatible() {
+		v1 = new Quantity<>(1.0, VolumeUnit.GALLON);
+		w2 = new Quantity<>(3.78541, WeightUnit.KILOGRAM);
+		assertFalse(v1.equals(v2));
+	}
+
+	@Test
+	public void testEquality_NullComparisons() {
+		v1 = new Quantity<>(1.0, VolumeUnit.GALLON);
+		assertFalse(v1.equals(null));
+	}
+
+	@Test
+	public void testEquality_SameReferences() {
+		v1 = new Quantity<>(1.0, VolumeUnit.GALLON);
+		v2 = v1;
+		assertTrue(v1.equals(v2));
+	}
+
+	@Test
+	public void testEquality_NullUnits() {
+		v1 = new Quantity<>(1.0, VolumeUnit.GALLON);
+		assertFalse(v1.equals(null));
+	}
+
+	@Test
+	public void testEquality_TransitivePropertys() {
+		Quantity<VolumeUnit> a = new Quantity<>(1.0, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> b = new Quantity<>(1000.0, VolumeUnit.MILLILITRE);
+		Quantity<VolumeUnit> c = new Quantity<>(0.264172, VolumeUnit.GALLON);
+
+		// Reflexive
+		assertTrue(a.equals(a));
+
+		// Symmetric
+		assertTrue(a.equals(b));
+		assertTrue(b.equals(a));
+
+		// Transitive
+		assertTrue(a.equals(b));
+		assertTrue(b.equals(c));
+		assertTrue(a.equals(c));
+	}
+
+	@Test
+	public void testEquality_ZeroValues() {
+		v1 = new Quantity<>(0.0, VolumeUnit.LITRE);
+		v2 = new Quantity<>(0.0, VolumeUnit.LITRE);
+		assertTrue(v1.equals(v2));
+	}
+
+	@Test
+	public void testEquality_NegativeVolume() {
+		v1 = new Quantity<>(-1.0, VolumeUnit.LITRE);
+		v2 = new Quantity<>(-1.0, VolumeUnit.LITRE);
+		assertTrue(v1.equals(v2));
+	}
+
+	@Test
+	public void testEquality_LargeVolumeValue() {
+		v1 = new Quantity<>(1e6, VolumeUnit.LITRE);
+		v2 = new Quantity<>(1e6, VolumeUnit.LITRE);
+		assertTrue(v1.equals(v2));
+	}
+
+	@Test
+	public void testEquality_SmallVolumeValue() {
+		v1 = new Quantity<>(1.0, VolumeUnit.LITRE);
+		v2 = new Quantity<>(1.0, VolumeUnit.LITRE);
+		assertTrue(v1.equals(v2));
+	}
+
+	@Test
+	public void testConversion_LitreToMillilitre() throws InvalidUnitMeasurementException {
+		v1 = new Quantity<>(1.0, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> result = QuantityMeasurementApp.demonstrateConversion(v1, VolumeUnit.MILLILITRE);
+		Quantity<VolumeUnit> expected = new Quantity<>(1000.0, VolumeUnit.MILLILITRE);
+		assertTrue(result.equals(expected));
+	}
+
+	@Test
+	public void testConversion_MillilitreToLitre() throws InvalidUnitMeasurementException {
+		v1 = new Quantity<>(1000.0, VolumeUnit.MILLILITRE);
+		Quantity<VolumeUnit> result = QuantityMeasurementApp.demonstrateConversion(v1, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> expected = new Quantity<>(1.0, VolumeUnit.LITRE);
+		assertTrue(result.equals(expected));
+	}
+
+	@Test
+	public void testConversion_GallonToLitre() throws InvalidUnitMeasurementException {
+		v1 = new Quantity<>(1.0, VolumeUnit.GALLON);
+		Quantity<VolumeUnit> result = QuantityMeasurementApp.demonstrateConversion(v1, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> expected = new Quantity<>(3.78541, VolumeUnit.LITRE);
+		assertTrue(result.equals(expected));
+	}
+
+	@Test
+	public void testConversion_LitreToGallon() throws InvalidUnitMeasurementException {
+		v1 = new Quantity<>(3.78541, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> result = QuantityMeasurementApp.demonstrateConversion(v1, VolumeUnit.GALLON);
+		Quantity<VolumeUnit> expected = new Quantity<>(1.0, VolumeUnit.GALLON);
+		assertTrue(result.equals(expected));
+	}
+
+	@Test
+	public void testConversion_MillilitreToGallon() throws InvalidUnitMeasurementException {
+		v1 = new Quantity<>(1000.0, VolumeUnit.MILLILITRE);
+		Quantity<VolumeUnit> result = QuantityMeasurementApp.demonstrateConversion(v1, VolumeUnit.GALLON);
+		Quantity<VolumeUnit> expected = new Quantity<>(0.264172, VolumeUnit.GALLON);
+		assertTrue(result.equals(expected));
+	}
+
+	@Test
+	public void testAddition_SameUnit_LitrePlusLitre() throws InvalidUnitMeasurementException {
+		v1 = new Quantity<>(1.0, VolumeUnit.LITRE);
+		v2 = new Quantity<>(1.0, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> result = QuantityMeasurementApp.demonstrateAddition(v1, v2);
+		Quantity<VolumeUnit> expected = new Quantity<>(2.0, VolumeUnit.LITRE);
+		assertTrue(result.equals(expected));
+	}
+
+	@Test
+	public void testAddition_SameUnit_MillilitrePlusMillilitre() throws InvalidUnitMeasurementException {
+		v1 = new Quantity<>(1000.0, VolumeUnit.MILLILITRE);
+		v2 = new Quantity<>(1000.0, VolumeUnit.MILLILITRE);
+		Quantity<VolumeUnit> result = QuantityMeasurementApp.demonstrateAddition(v1, v2);
+		Quantity<VolumeUnit> expected = new Quantity<>(2.0, VolumeUnit.LITRE);
+		assertTrue(result.equals(expected));
+	}
+
+	@Test
+	public void testAddition_CrossUnit_LitrePlusMillilitre() throws InvalidUnitMeasurementException {
+		v1 = new Quantity<>(1.0, VolumeUnit.LITRE);
+		v2 = new Quantity<>(4000.0, VolumeUnit.MILLILITRE);
+		Quantity<VolumeUnit> result = QuantityMeasurementApp.demonstrateAddition(v1, v2);
+		Quantity<VolumeUnit> expected = new Quantity<>(5.0, VolumeUnit.LITRE);
+		assertTrue(result.equals(expected));
+	}
+
+	@Test
+	public void testAddition_CrossUnit_MillilitrePlusLitre() throws InvalidUnitMeasurementException {
+		v1 = new Quantity<>(3000.0, VolumeUnit.MILLILITRE);
+		v2 = new Quantity<>(2.0, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> result = QuantityMeasurementApp.demonstrateAddition(v1, v2);
+		Quantity<VolumeUnit> expected = new Quantity<>(5.0, VolumeUnit.LITRE);
+		assertTrue(result.equals(expected));
+	}
+
+	@Test
+	public void testAddition_CrossUnit_GallonPlusLitre() throws InvalidUnitMeasurementException {
+		v1 = new Quantity<>(1.0, VolumeUnit.GALLON);
+		v2 = new Quantity<>(1.0, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> result = QuantityMeasurementApp.demonstrateAddition(v1, v2);
+		Quantity<VolumeUnit> expected = new Quantity<>(4.78541, VolumeUnit.LITRE);
+		assertTrue(result.equals(expected));
+	}
+
+	@Test
+	public void testAddition_ExplicitTargetUnit_Litre() throws InvalidUnitMeasurementException {
+		v1 = new Quantity<>(2000.0, VolumeUnit.MILLILITRE);
+		v2 = new Quantity<>(3.0, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> result = QuantityMeasurementApp.demonstrateAddition(v1, v2, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> expected = new Quantity<>(5.0, VolumeUnit.LITRE);
+		assertTrue(result.equals(expected));
+	}
+
+	@Test
+	public void testAddition_ExplicitTargetUnit_Millilitre() throws InvalidUnitMeasurementException {
+		v1 = new Quantity<>(2000.0, VolumeUnit.MILLILITRE);
+		v2 = new Quantity<>(3.0, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> result = QuantityMeasurementApp.demonstrateAddition(v1, v2, VolumeUnit.MILLILITRE);
+		Quantity<VolumeUnit> expected = new Quantity<>(5000.0, VolumeUnit.MILLILITRE);
+		assertTrue(result.equals(expected));
+	}
+
+	@Test
+	public void testAddition_ExplicitTargetUnit_Gallon() throws InvalidUnitMeasurementException {
+		v1 = new Quantity<>(1000.0, VolumeUnit.MILLILITRE);
+		v2 = new Quantity<>(2.78541, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> result = QuantityMeasurementApp.demonstrateAddition(v1, v2, VolumeUnit.GALLON);
+		Quantity<VolumeUnit> expected = new Quantity<>(1.0, VolumeUnit.GALLON);
+		assertTrue(result.equals(expected));
+	}
+
+	@Test
+	public void testAddition_Commutativitys() throws InvalidUnitMeasurementException {
+		v1 = new Quantity<>(1000.0, VolumeUnit.MILLILITRE);
+		v2 = new Quantity<>(2.78541, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> result2 = QuantityMeasurementApp.demonstrateAddition(v1, v2, VolumeUnit.GALLON);
+		Quantity<VolumeUnit> result1 = QuantityMeasurementApp.demonstrateAddition(v2, v1, VolumeUnit.GALLON);
+		assertTrue(result1.equals(result2));
+	}
+
+	@Test
+	public void testVolumeUnitEnum_LitreConstant() {
+		double result = VolumeUnit.LITRE.convertToBaseUnit(1.0);
+		assertEquals(1.0, result, 0.0001);
+	}
+
+	@Test
+	public void testVolumeUnitEnum_MillilitreConstant() {
+		double result = VolumeUnit.MILLILITRE.convertToBaseUnit(1000.0);
+		assertEquals(1.0, result, 0.0001);
+	}
+
+	@Test
+	public void testVolumeUnitEnum_GallonConstant() {
+		double result = VolumeUnit.GALLON.convertToBaseUnit(1.0);
+		assertEquals(3.78541, result, 0.0001);
+	}
+
+	@Test
+	public void testConvertToBaseUnit_LitreToLitre() throws InvalidUnitMeasurementException {
+		v1 = new Quantity<>(1.0, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> result = QuantityMeasurementApp.demonstrateConversion(v1, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> expected = new Quantity<>(1.0, VolumeUnit.LITRE);
+		assertTrue(result.equals(expected));
+	}
+
+	@Test
+	public void testConvertToBaseUnit_MillilitreToLitre() throws InvalidUnitMeasurementException {
+		v1 = new Quantity<>(5000.0, VolumeUnit.MILLILITRE);
+		Quantity<VolumeUnit> result = QuantityMeasurementApp.demonstrateConversion(v1, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> expected = new Quantity<>(5.0, VolumeUnit.LITRE);
+		assertTrue(result.equals(expected));
+	}
+
+	@Test
+	public void testConvertToBaseUnit_GallonToLitre() throws InvalidUnitMeasurementException {
+		v1 = new Quantity<>(1.0, VolumeUnit.GALLON);
+		Quantity<VolumeUnit> result = QuantityMeasurementApp.demonstrateConversion(v1, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> expected = new Quantity<>(3.78541, VolumeUnit.LITRE);
+		assertTrue(result.equals(expected));
+	}
+
+	@Test
+	public void testConvertFromBaseUnit_LitreToLitre() throws InvalidUnitMeasurementException {
+		v1 = new Quantity<>(1.0, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> result = QuantityMeasurementApp.demonstrateConversion(v1, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> expected = new Quantity<>(1.0, VolumeUnit.LITRE);
+		assertTrue(result.equals(expected));
+	}
+
+	@Test
+	public void testConvertFromBaseUnit_LitreToMillilitre() throws InvalidUnitMeasurementException {
+		v1 = new Quantity<>(1.0, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> result = QuantityMeasurementApp.demonstrateConversion(v1, VolumeUnit.MILLILITRE);
+		Quantity<VolumeUnit> expected = new Quantity<>(1000.0, VolumeUnit.MILLILITRE);
+		assertTrue(result.equals(expected));
+	}
+
+	@Test
+	public void testConvertFromBaseUnit_LitreToGallon() throws InvalidUnitMeasurementException {
+		v1 = new Quantity<>(3.78541, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> result = QuantityMeasurementApp.demonstrateConversion(v1, VolumeUnit.GALLON);
+		Quantity<VolumeUnit> expected = new Quantity<>(1.0, VolumeUnit.GALLON);
+		assertTrue(result.equals(expected));
+	}
+
+	@Test
+	public void testBackwardCompatibility_AllUC1Through10Tests() throws InvalidUnitMeasurementException {
+		Quantity<LengthUnit> feet1 = new Quantity<>(10.0, LengthUnit.FEET);
+		Quantity<LengthUnit> feet2 = new Quantity<>(10.0, LengthUnit.FEET);
+
+		// Using the new Generic App Logic
+		assertTrue(QuantityMeasurementApp.demonstrateEquality(feet1, feet2));
+
+		w1 = new Quantity<>(1.0, WeightUnit.KILOGRAM);
+		w2 = new Quantity<>(1.0, WeightUnit.KILOGRAM);
+		assertTrue(w1.equals(w2));
+	}
+
+	@Test
+	public void testGenericQuantity_VolumeOperations_Consistency() throws InvalidUnitMeasurementException {
+		Quantity<VolumeUnit> v1 = new Quantity<>(1.0, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> v2 = new Quantity<>(1000.0, VolumeUnit.MILLILITRE);
+		assertTrue(v1.equals(v2));
+
+		v1 = new Quantity<>(2000.0, VolumeUnit.MILLILITRE);
+		v2 = new Quantity<>(3.0, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> result = QuantityMeasurementApp.demonstrateAddition(v1, v2, VolumeUnit.MILLILITRE);
+		Quantity<VolumeUnit> expected = new Quantity<>(5000.0, VolumeUnit.MILLILITRE);
+		assertTrue(result.equals(expected));
+
+		v1 = new Quantity<>(3.78541, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> result1 = QuantityMeasurementApp.demonstrateConversion(v1, VolumeUnit.GALLON);
+		Quantity<VolumeUnit> expected1 = new Quantity<>(1.0, VolumeUnit.GALLON);
+		assertTrue(result1.equals(expected1));
+
+	}
+
+	@Test
+	public void testScalability_VolumeIntegration() throws InvalidUnitMeasurementException {
+		Quantity<VolumeUnit> v1 = new Quantity<>(1.0, VolumeUnit.GALLON);
+		Quantity<VolumeUnit> v2 = new Quantity<>(3.78541, VolumeUnit.LITRE);
+		assertTrue(v1.equals(v2));
+
+		v1 = new Quantity<>(3.78541, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> result1 = QuantityMeasurementApp.demonstrateConversion(v1, VolumeUnit.GALLON);
+		Quantity<VolumeUnit> expected1 = new Quantity<>(1.0, VolumeUnit.GALLON);
+		assertTrue(result1.equals(expected1));
+
+		v1 = new Quantity<>(1.0, VolumeUnit.GALLON);
+		v2 = new Quantity<>(3.78541, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> result = QuantityMeasurementApp.demonstrateAddition(v1, v2, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> expected = new Quantity<>(7.57082, VolumeUnit.LITRE);
+		assertTrue(expected.equals(result));
+	}
+
+	// UC-12
+
+	@Test
+	public void testSubtraction_SameUnit_FeetMinusFeet() {
+		Quantity<LengthUnit> q1 = new Quantity<>(10.0, LengthUnit.FEET);
+		Quantity<LengthUnit> q2 = new Quantity<>(5.0, LengthUnit.FEET);
+
+		Quantity<LengthUnit> result = q1.subtract(q2);
+
+		assertTrue(result.equals(new Quantity<>(5.0, LengthUnit.FEET)));
+	}
+
+	@Test
+	public void testSubtraction_SameUnit_LitreMinusLitre() {
+		Quantity<VolumeUnit> q1 = new Quantity<>(12.0, VolumeUnit.LITRE);
+		Quantity<VolumeUnit> q2 = new Quantity<>(4.0, VolumeUnit.LITRE);
+
+		Quantity<VolumeUnit> result = q1.subtract(q2);
+
+		assertTrue(result.equals(new Quantity<>(8.0, VolumeUnit.LITRE)));
+	}
+
+	@Test
+	public void testSubtraction_CrossUnit_FeetMinusInches() {
+		Quantity<LengthUnit> q1 = new Quantity<>(10.0, LengthUnit.FEET);
+		Quantity<LengthUnit> q2 = new Quantity<>(6.0, LengthUnit.INCHES);
+
+		assertTrue(q1.subtract(q2).equals(new Quantity<>(9.5, LengthUnit.FEET)));
+	}
+
+	@Test
+	public void testSubtraction_CrossUnit_InchesMinusFeet() {
+		Quantity<LengthUnit> q1 = new Quantity<>(120.0, LengthUnit.INCHES);
+		Quantity<LengthUnit> q2 = new Quantity<>(5.0, LengthUnit.FEET);
+
+		assertTrue(q1.subtract(q2).equals(new Quantity<>(60.0, LengthUnit.INCHES)));
+	}
+
+	@Test
+	public void testSubtraction_ExplicitTargetUnit_Inches() {
+		Quantity<LengthUnit> q1 = new Quantity<>(10.0, LengthUnit.FEET);
+		Quantity<LengthUnit> q2 = new Quantity<>(6.0, LengthUnit.INCHES);
+
+		Quantity<LengthUnit> result = q1.subtract(q2, LengthUnit.INCHES);
+
+		assertTrue(result.equals(new Quantity<>(114.0, LengthUnit.INCHES)));
+	}
+
+	@Test
+	public void testSubtraction_ResultingInNegative() {
+		Quantity<LengthUnit> q1 = new Quantity<>(5.0, LengthUnit.FEET);
+		Quantity<LengthUnit> q2 = new Quantity<>(10.0, LengthUnit.FEET);
+
+		assertTrue(q1.subtract(q2).equals(new Quantity<>(-5.0, LengthUnit.FEET)));
+	}
+
+	@Test
+	public void testSubtraction_ResultingInZero() {
+		Quantity<LengthUnit> q1 = new Quantity<>(10.0, LengthUnit.FEET);
+		Quantity<LengthUnit> q2 = new Quantity<>(120.0, LengthUnit.INCHES);
+
+		assertTrue(q1.subtract(q2).equals(new Quantity<>(0.0, LengthUnit.FEET)));
+	}
+
+	public void testSubtraction_NullOperand() {
+		assertThrows(IllegalArgumentException.class, () -> {
+			Quantity<LengthUnit> q1 = new Quantity<>(10.0, LengthUnit.FEET);
+			q1.subtract(null);
+		});
+	}
+
+	@Test
+	public void testSubtraction_Immutability() {
+		Quantity<LengthUnit> q1 = new Quantity<>(10.0, LengthUnit.FEET);
+		Quantity<LengthUnit> q2 = new Quantity<>(5.0, LengthUnit.FEET);
+
+		q1.subtract(q2);
+
+		assertTrue(q1.equals(new Quantity<>(10.0, LengthUnit.FEET)));
+		assertTrue(q2.equals(new Quantity<>(5.0, LengthUnit.FEET)));
+	}
+
+	@Test
+	public void testDivision_SameUnit_FeetDividedByFeet() {
+		Quantity<LengthUnit> q1 = new Quantity<>(10.0, LengthUnit.FEET);
+		Quantity<LengthUnit> q2 = new Quantity<>(2.0, LengthUnit.FEET);
+
+		assertEquals(5.0, q1.divide(q2), 0.0001);
+	}
+
+	@Test
+	public void testDivision_CrossUnit_FeetDividedByInches() {
+		Quantity<LengthUnit> q1 = new Quantity<>(24.0, LengthUnit.INCHES);
+		Quantity<LengthUnit> q2 = new Quantity<>(2.0, LengthUnit.FEET);
+
+		assertEquals(1.0, q1.divide(q2), 0.0001);
+	}
+
+	@Test
+	public void testDivision_RatioLessThanOne() {
+		Quantity<LengthUnit> q1 = new Quantity<>(5.0, LengthUnit.FEET);
+		Quantity<LengthUnit> q2 = new Quantity<>(10.0, LengthUnit.FEET);
+
+		assertEquals(0.5, q1.divide(q2), 0.0001);
+	}
+
+	public void testDivision_ByZero() {
+		assertThrows(ArithmeticException.class, () -> {
+			Quantity<LengthUnit> q1 = new Quantity<>(10.0, LengthUnit.FEET);
+			Quantity<LengthUnit> q2 = new Quantity<>(0.0, LengthUnit.FEET);
+
+			q1.divide(q2);
+		});
+	}
+
+	public void testDivision_NullOperand() {
+		assertThrows(IllegalArgumentException.class, () -> {
+			Quantity<LengthUnit> q1 = new Quantity<>(10.0, LengthUnit.FEET);
+			q1.divide(null);
+		});
+	}
+
+	@Test
+	public void testDivision_NonCommutative() {
+		Quantity<LengthUnit> q1 = new Quantity<>(10.0, LengthUnit.FEET);
+		Quantity<LengthUnit> q2 = new Quantity<>(5.0, LengthUnit.FEET);
+
+		assertEquals(2.0, q1.divide(q2), 0.0001);
+		assertEquals(0.5, q2.divide(q1), 0.0001);
+	}
+
+	@Test
+	public void testDivision_Immutability() {
+		Quantity<LengthUnit> q1 = new Quantity<>(10.0, LengthUnit.FEET);
+		Quantity<LengthUnit> q2 = new Quantity<>(5.0, LengthUnit.FEET);
+
+		q1.divide(q2);
+
+		assertTrue(q1.equals(new Quantity<>(10.0, LengthUnit.FEET)));
+		assertTrue(q2.equals(new Quantity<>(5.0, LengthUnit.FEET)));
+	}
+
+	// uc14
+
+	@Test
+	public void testTemperatureEquality_CelsiusToCelsius_SameValue() {
+		t1 = new Quantity<TemperatureUnit>(10.0, TemperatureUnit.CELSIUS);
+		t2 = new Quantity<TemperatureUnit>(10.0, TemperatureUnit.CELSIUS);
+		assertTrue(t1.equals(t2));
+	}
+
+	@Test
+	public void testTemperatureEquality_FahrenheitToFahrenheit_SameValue() {
+		t1 = new Quantity<TemperatureUnit>(10.0, TemperatureUnit.FAHRENHEIT);
+		t2 = new Quantity<TemperatureUnit>(10.0, TemperatureUnit.FAHRENHEIT);
+		assertTrue(t1.equals(t2));
+	}
+
+	@Test
+	public void testTemperatureEquality_CelsiusToFahrenheit_0Celsius32Fahrenheit() {
+		assertTrue(
+				new Quantity<>(0.0, TemperatureUnit.CELSIUS).equals(new Quantity<>(32.0, TemperatureUnit.FAHRENHEIT)));
+	}
+
+	@Test
+	public void testTemperatureEquality_CelsiusToFahrenheit_100Celsius212Fahrenheit() {
+		assertTrue(new Quantity<>(100.0, TemperatureUnit.CELSIUS)
+				.equals(new Quantity<>(212.0, TemperatureUnit.FAHRENHEIT)));
+	}
+
+	@Test
+	public void testTemperatureEquality_CelsiusToFahrenheit_Negative40Equal() {
+		assertTrue(new Quantity<>(-40.0, TemperatureUnit.CELSIUS)
+				.equals(new Quantity<>(-40.0, TemperatureUnit.FAHRENHEIT)));
+	}
+
+	@Test
+	public void testTemperatureEquality_SymmetricProperty() {
+		t1 = new Quantity<TemperatureUnit>(37.0, TemperatureUnit.CELSIUS);
+		t2 = new Quantity<TemperatureUnit>(98.6, TemperatureUnit.FAHRENHEIT);
+		assertTrue(t1.equals(t2));
+		assertTrue(t2.equals(t1));
+	}
+
+	@Test
+	public void testTemperatureEquality_ReflexiveProperty() {
+		t1 = new Quantity<TemperatureUnit>(37.0, TemperatureUnit.CELSIUS);
+		assertTrue(t1.equals(t1));
+	}
+
+	@Test
+	public void testTemperatureConversion_CelsiusToFahrenheit_VariousValues() throws InvalidUnitMeasurementException {
+		t1 = new Quantity<TemperatureUnit>(50.0, TemperatureUnit.CELSIUS);
+		t2 = QuantityMeasurementApp.demonstrateConversion(t1, TemperatureUnit.FAHRENHEIT);
+		assertTrue(t2.equals(new Quantity<TemperatureUnit>(122.0, TemperatureUnit.FAHRENHEIT)));
+	}
+
+	@Test
+	public void testTemperatureConversion_FahrenheitToCelsius_VariousValues() throws InvalidUnitMeasurementException {
+		t1 = new Quantity<TemperatureUnit>(50.0, TemperatureUnit.CELSIUS);
+		t2 = QuantityMeasurementApp.demonstrateConversion(t1, TemperatureUnit.CELSIUS);
+		assertTrue(t2.equals(new Quantity<TemperatureUnit>(50.0, TemperatureUnit.CELSIUS)));
+	}
 }
