@@ -9,6 +9,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.util.List;
+import java.util.logging.Logger;
 
 import com.apps.quantitymeasurement.entity.QuantityMeasurementEntity;
 
@@ -36,6 +37,9 @@ public class QuantityMeasurementCacheRepository implements IQuantityMeasurementR
 
 	// Singleton instance of the repository
 	private static QuantityMeasurementCacheRepository instance;
+	
+	//Logger for loggin information and errors
+	private static final Logger logger = Logger.getLogger(QuantityMeasurementCacheRepository.class.getName());
 
 	// Private constructor to prevent instantiation from outside the class
 	private QuantityMeasurementCacheRepository() {
@@ -43,6 +47,8 @@ public class QuantityMeasurementCacheRepository implements IQuantityMeasurementR
 		quantityMeasurementEntityCache = new java.util.ArrayList<>();
 		// Load any existing data from disk
 		loadFromDisk();
+		
+		logger.info("QuantityMeasurementCacheRepository initialized with " + quantityMeasurementEntityCache.size() + " entities loaded form the disk");
 	}
 
 	// Get single instance of repository
