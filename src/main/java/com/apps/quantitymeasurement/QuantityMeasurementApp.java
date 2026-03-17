@@ -1,3 +1,4 @@
+
 package com.apps.quantitymeasurement;
 
 import com.apps.quantitymeasurement.controller.QuantityMeasurementController;
@@ -104,5 +105,13 @@ public class QuantityMeasurementApp {
 		QuantityDTO inchToFeet = app.controller.performConversion(inchDTO, feetDTO);
 		System.out.println(result);
 		System.out.println(inchToFeet);
+	}
+
+	public QuantityMeasurementController getController() {
+		return controller;
+	}
+
+	public IQuantityMeasurementRepository getRepository() {
+		return repository;
 	}
 }
