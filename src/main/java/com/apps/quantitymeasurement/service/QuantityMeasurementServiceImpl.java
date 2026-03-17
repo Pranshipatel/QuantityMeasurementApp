@@ -1,6 +1,7 @@
+
 package com.apps.quantitymeasurement.service;
 
-
+import java.util.logging.Logger;
 
 import com.apps.quantitymeasurement.entity.QuantityDTO;
 import com.apps.quantitymeasurement.entity.QuantityMeasurementEntity;
@@ -16,10 +17,14 @@ import com.apps.quantitymeasurement.unit.WeightUnit;
 public class QuantityMeasurementServiceImpl implements IQuantityMeasurementService {
 
 	private IQuantityMeasurementRepository repository;
+	
+	//Logger for logginf information and errors
+	private static final Logger logger = Logger.getLogger(QuantityMeasurementServiceImpl.class.getName());
 
 	// constructor
 	public QuantityMeasurementServiceImpl(IQuantityMeasurementRepository repository) {
 		this.repository = repository;
+		logger.info("QuanitityMeasurementServiceImpl init with repository: " + repository.getClass().getSimpleName());
 	}
 
 	@Override
@@ -245,9 +250,8 @@ public class QuantityMeasurementServiceImpl implements IQuantityMeasurementServi
 		return new QuantityModel<>(dto.getValue(), unit);
 	}
 
-	/**
-	 * Validation logic as requested in the flow diagram
-	 */
+	// Validation logic as requested in the flow diagram
+
 	private void validateModels(QuantityModel<?> m1, QuantityModel<?> m2) {
 		if (m1 == null || m2 == null)
 			throw new IllegalArgumentException("Operands cannot be null");
