@@ -1,4 +1,3 @@
-
 package com.app.quantitymeasurement.repository;
 
 import java.util.List;
