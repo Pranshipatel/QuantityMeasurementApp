@@ -1,7 +1,5 @@
 # QuantityMeasurementApp
 
-A Java application that demonstrates equality comparison of length measurements 
-using object-oriented principles and progressive refactoring (UC1 → UC3).
 
 ---
 
@@ -439,7 +437,3 @@ Implements **JWT-based authentication** with **Google OAuth2 login** using Sprin
 - Production-ready user management  
 
 ---
-<<<<<<< HEAD
-=======
-
->>>>>>> 0ff1ff523713bd5de6d6a9721939c9954ed451ff
