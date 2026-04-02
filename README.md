@@ -1,3 +1,4 @@
+
 # QuantityMeasurementApp
 
 A Java application that demonstrates equality comparison of length measurements 
@@ -172,5 +173,270 @@ Extends UC6 by allowing the caller to specify any supported unit as the result u
 - Method overloading: `add(l1, l2)` implicit vs `add(l1, l2, targetUnit)` explicit
 - Private utility method eliminates DRY violation between overloads
 - Commutativity holds for any target unit
+
+---
+# 📏 UC8: Refactoring LengthUnit to Standalone Enum
+
+## Description
+Extracts `LengthUnit` from inside `QuantityLength` into a standalone top-level class. Assigns conversion responsibility to the enum itself. `QuantityLength` is simplified to delegate all conversions to unit methods. All UC1–UC7 functionality preserved.
+
+## Flow
+1. `LengthUnit` enum handles `convertToBaseUnit()` and `convertFromBaseUnit()`.
+2. `QuantityLength` delegates all conversions to unit methods.
+3. Public API remains unchanged → backward compatible.
+
+## Key Concepts
+- Single Responsibility: `LengthUnit` converts, `QuantityLength` compares/adds
+- Eliminates circular dependency for multi-category scaling
+- Pattern template for future `WeightUnit`, `VolumeUnit`, etc.
+
+---
+
+# 📏 UC9: Weight Measurement (Equality, Conversion & Addition)
+
+## Description
+Introduces a new `WeightUnit` enum and `QuantityWeight` class mirroring the UC8 length pattern. Supports equality, conversion, and addition for KILOGRAM, GRAM, and POUND. Weight and length are incompatible categories.
+
+## Conversion Factors (base: KILOGRAM)
+| Unit | Factor |
+|------|--------|
+| KILOGRAM | 1.0 |
+| GRAM | 0.001 |
+| POUND | 0.453592 |
+
+## Key Concepts
+- `WeightUnit` standalone enum with `convertToBaseUnit()` / `convertFromBaseUnit()`
+- Category type safety: `Quantity(1.0, KG).equals(Quantity(1.0, FOOT))` → `false`
+- Overloaded `add()`: implicit (first operand unit) and explicit (target unit)
+- `hashCode()` overridden consistently with `equals()`
+
+---
+
+# 📏  UC10: Generic Quantity Class with IMeasurable Interface
+
+## Description
+Refactors `QuantityLength` and `QuantityWeight` into a single generic `Quantity<U extends IMeasurable>` class. Eliminates code duplication across categories using a common interface. All UC1–UC9 functionality preserved.
+
+## Architecture
+| Component | Responsibility |
+|-----------|---------------|
+| `IMeasurable` | Defines unit conversion contract |
+| `LengthUnit` / `WeightUnit` | Implement `IMeasurable` with conversion factors |
+| `Quantity<U>` | Handles equality, conversion, addition for any unit |
+| `QuantityMeasurementApp` | Generic demonstration only |
+
+## Key Concepts
+- Bounded type parameter `<U extends IMeasurable>` for compile-time type safety
+- Cross-category prevention via `unit.getClass()` comparison
+- `equals()`, `convertTo()`, `add()` implemented once — reused for all categories
+- Adding new categories requires ONLY a new enum implementing `IMeasurable`
+
+---
+
+# 📏 UC11: Volume Measurement (Litre, Millilitre, Gallon)
+
+## Description
+Adds a third measurement category — volume — by creating a `VolumeUnit` enum implementing `IMeasurable`. No changes to `Quantity<U>`, `QuantityMeasurementApp`, or existing tests required. Proves the UC10 architecture scales linearly.
+
+## Conversion Factors (base: LITRE)
+| Unit | Factor |
+|------|--------|
+| LITRE | 1.0 |
+| MILLILITRE | 0.001 |
+| GALLON | 3.78541 |
+
+## Key Concepts
+- Only a new enum needed to add a full measurement category
+- Cross-category safety: `1.0 LITRE ≠ 1.0 KILOGRAM` and `1.0 LITRE ≠ 1.0 FOOT`
+- All generic `Quantity<U>` operations work automatically
+
+---
+
+# 📏 UC12: Subtraction and Division Operations
+
+## Description
+Extends `Quantity<U>` with subtraction (returns `Quantity<U>`) and division (returns dimensionless `double`). Both operations support cross-unit arithmetic within the same category and maintain immutability.
+
+## Operations
+| Method | Returns | Notes |
+|--------|---------|-------|
+| `subtract(other)` | `Quantity<U>` | Result in first operand's unit |
+| `subtract(other, targetUnit)` | `Quantity<U>` | Result in explicit unit |
+| `divide(other)` | `double` | Dimensionless ratio |
+
+## Key Concepts
+- Subtraction is **non-commutative**: `A - B ≠ B - A`
+- Division is **non-commutative**: `A ÷ B ≠ B ÷ A`
+- Division by zero throws `ArithmeticException`
+- Cross-category operations throw `IllegalArgumentException`
+
+---
+
+# 📏 UC13: Centralized Arithmetic Logic (DRY Refactoring)
+
+## Description
+Refactors UC12's `add()`, `subtract()`, and `divide()` to eliminate duplicated validation and conversion logic by introducing a centralized private helper method and an `ArithmeticOperation` enum. Public API is unchanged; all UC12 behavior preserved.
+
+## Internal Architecture
+| Component | Role |
+|-----------|------|
+| `ArithmeticOperation` enum | Dispatches ADD, SUBTRACT, DIVIDE via `compute(a, b)` |
+| `validateArithmeticOperands()` | Centralized null, category, finiteness checks |
+| `performBaseArithmetic()` | Converts to base unit → executes operation → returns result |
+
+
+## Key Concepts
+- All validation defined once → consistent errors across all operations
+
+---
+# 📏 UC14: Temperature with Selective Arithmetic Support  
+
+## Description  
+Introduces **Temperature (Celsius, Fahrenheit, Kelvin)** support and refactors `IMeasurable` to enable **optional arithmetic operations**.  
+Ensures that measurement categories with different constraints (like temperature) are handled correctly without breaking existing functionality.
+
+## Operations  
+| Method | Returns | Notes |
+|--------|---------|-------|
+| `equals(other)` | `boolean` | Supports comparison across temperature units |
+| `convertTo(targetUnit)` | `Quantity<U>` | Uses non-linear conversion formulas |
+| `add(other)` | ❌ Unsupported | Throws `UnsupportedOperationException` |
+| `subtract(other)` | ❌ Unsupported | Throws `UnsupportedOperationException` |
+| `divide(other)` | ❌ Unsupported | Throws `UnsupportedOperationException` |
+
+## Key Concepts  
+- Temperature does **not support arithmetic operations**  
+- Introduced **default methods** in `IMeasurable` for optional behavior  
+- Added validation to **restrict unsupported operations**  
+- Ensures **fail-fast execution** using clear exceptions  
+- Maintains **backward compatibility**  
+- Follows **Interface Segregation Principle (ISP)**  
+
+---
+
+# 📏 UC15: N-Tier Architecture Refactoring  
+
+## Description  
+Refactors the Quantity Measurement Application into a **clean N-Tier architecture** for better scalability, maintainability, and testability while preserving all existing functionality (UC1–UC14).
+
+## Layers  
+| Layer | Responsibility |
+|------|----------------|
+| Application | Entry point (`QuantityMeasurementApp`) |
+| Controller | Handles requests (`QuantityMeasurementController`) |
+| Service | Business logic (`QuantityMeasurementServiceImpl`) |
+| Repository | Data handling (`IQuantityMeasurementRepository`, Cache Singleton) |
+| Model/Entity | Data transfer & persistence (`QuantityDTO`, Model, Entity) |
+
+## Key Concepts  
+- **Separation of concerns** across layers  
+- Business logic reusable for **CLI / REST / GUI**  
+- Improved **testability & maintainability**  
+- Supports **Dependency Injection**  
+- Uses design patterns:  
+  - **Singleton** (Repository)  
+  - **Factory** (Object creation)  
+  - **Facade** (Controller layer)  
+  - **Dependency Injection** (Loose coupling)  
+
+---
+# 📏 UC16: JDBC Persistence Integration  
+
+## Description  
+Adds **JDBC-based database persistence** to the N-Tier architecture, replacing in-memory storage with a scalable solution.
+
+## Enhancements  
+- JDBC repository with CRUD support  
+- Config via `application.properties`  
+- Connection pooling  
+- Custom `DatabaseException`  
+- Cache + DB switch using DI  
+- SLF4J logging, Maven setup  
+
+## Key Concepts  
+- Persistent storage with secure SQL (**PreparedStatement**)  
+- **Connection pooling** for performance  
+- **Dependency Injection** for flexibility  
+
+## Database  
+- H2 (dev/testing), schema-based  
+- Supports query, filter, count, delete  
+
+## Testing  
+- Unit + integration tests (H2)  
+- Pool & SQL injection validation  
+
+## Commands  
+- `mvn clean compile`  
+- `mvn exec:java`  
+- `mvn clean test`  
+
+## Improvements  
+- In-memory → DB  
+- No queries → SQL support  
+- No pooling → Optimized performance  
+
+---
+# 📏 UC17: Spring Boot REST API Integration  
+
+## Description  
+Transforms the application into a **Spring Boot REST API** using **Spring Data JPA**, replacing JDBC for a scalable backend.
+
+## Enhancements  
+- Spring Boot (auto-config, embedded server)  
+- REST APIs (`@RestController`, JSON)  
+- Spring Data JPA (CRUD & queries)  
+- Service layer with DI  
+- DTO validation + global exception handling  
+- Swagger (API docs) + Actuator (health/metrics)  
+
+## Key Concepts  
+- RESTful architecture  
+- Reduced boilerplate via Spring ecosystem  
+- Clean layered design with DI  
+
+## Testing  
+- `@WebMvcTest` (Controller)  
+- `@SpringBootTest` (Integration)  
+- Mockito  
+
+## Commands  
+- `mvn spring-boot:run`  
+- `mvn clean test`  
+
+## Improvements  
+- JDBC → JPA  
+- Monolithic → REST API  
+- Manual config → Auto-configured system  
+
+---
+
+# 📏 UC18: Google Authentication & User Management  
+
+## Description  
+Implements **JWT-based authentication** with **Google OAuth2 login** using Spring Security for a secure, stateless REST API.
+
+## Enhancements  
+- User entity (username, email, password, role)  
+- JWT auth (`UserController`, `JwtService`, `JwtFilter`)  
+- Google OAuth2 login (`GoogleAuthController`)  
+- Spring Security config (JWT + OAuth2)  
+- DTOs for request/response handling  
+- BCrypt password encryption  
+- Custom exception handling & auth entry point  
+
+## Key Concepts  
+- Stateless authentication using JWT  
+- OAuth2 (Google login) integration  
+- Secure filter chain with Spring Security  
+- Supports both local & third-party login  
+
+## Testing  
+- Swagger & Postman validation  
+
+## Outcome  
+- Secure, scalable authentication system  
+- Combined JWT + OAuth2 in one app  
+- Production-ready user management  
 
 ---
