@@ -70,7 +70,7 @@ public class SecurityConfig {
         corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 
         corsConfiguration.setAllowedOrigins(List.of(
-                "http://qmafrontend.s3-website.ap-south-1.amazonaws.com", // 
+                "http://qmafrontend1.s3-website.ap-south-1.amazonaws.com/auth", // 
                 "http://localhost:4200" 
         ));
 
